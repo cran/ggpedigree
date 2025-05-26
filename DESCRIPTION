@@ -1,7 +1,7 @@
 Package: ggpedigree
 Title: Visualizing Pedigrees with 'ggplot2' and 'plotly'
-Version: 0.4.0
-Date/Publication: 2025-05-23 18:22:01 UTC
+Version: 0.4.1
+Date/Publication: 2025-05-26 09:20:05 UTC
 Authors@R: c(
     person("S. Mason", "Garrison", email= "garrissm@wfu.edu", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-4804-6003"))
@@ -14,9 +14,9 @@ BugReports: https://github.com/R-Computing-Lab/ggpedigree/issues
 Depends: R (>= 4.1.0)
 Imports: BGmisc, kinship2, ggplot2, ggrepel, rlang, dplyr, stringr,
         utils, plotly, reshape2
-Suggests: EasyMx, viridis, knitr, tidyverse, discord, OpenMx,
-        NlsyLinks, rmarkdown, tibble, corrplot, readxl, htmlwidgets,
-        testthat (>= 3.0.0)
+Suggests: viridis, knitr, tidyverse, discord, OpenMx, NlsyLinks,
+        rmarkdown, tibble, corrplot, readxl, htmlwidgets, testthat (>=
+        3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
@@ -24,7 +24,7 @@ RoxygenNote: 7.3.2
 Language: en-US
 LazyData: true
 NeedsCompilation: no
-Packaged: 2025-05-20 19:16:24 UTC; smaso
+Packaged: 2025-05-25 02:10:23 UTC; smaso
 Author: S. Mason Garrison [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4804-6003>)
 Maintainer: S. Mason Garrison <garrissm@wfu.edu>
