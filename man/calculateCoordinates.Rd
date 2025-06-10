@@ -6,11 +6,12 @@
 \usage{
 calculateCoordinates(
   ped,
-  personID = "ID",
+  personID = "personID",
   momID = "momID",
   dadID = "dadID",
   spouseID = "spouseID",
   sexVar = "sex",
+  twinID = "twinID",
   code_male = NULL,
   config = list()
 )
@@ -27,6 +28,8 @@ calculateCoordinates(
 \item{spouseID}{Character. Name of the column in `ped` for the spouse ID variable.}
 
 \item{sexVar}{Character. Name of the column in `ped` for the sex variable.}
+
+\item{twinID}{Character string specifying the column name for twin IDs. Defaults to "twinID".}
 
 \item{code_male}{Value used to indicate male sex. Defaults to NULL.}
 

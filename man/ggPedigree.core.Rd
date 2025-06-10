@@ -10,10 +10,17 @@ ggPedigree.core(
   personID = "personID",
   momID = "momID",
   dadID = "dadID",
-  status_col = NULL,
+  spouseID = "spouseID",
+  matID = "matID",
+  patID = "patID",
+  twinID = "twinID",
+  focal_fill_column = NULL,
+  overlay_column = NULL,
+  status_column = NULL,
   config = list(),
   debug = FALSE,
   hints = NULL,
+  function_name = "ggPedigree",
   ...
 )
 }
@@ -28,18 +35,31 @@ ggPedigree.core(
 
 \item{dadID}{Character string specifying the column name for father IDs. Defaults to "dadID".}
 
-\item{status_col}{Character string specifying the column name for affected status. Defaults to NULL.}
+\item{spouseID}{Character string specifying the column name for spouse IDs. Defaults to "spouseID".}
+
+\item{matID}{Character string specifying the column name for maternal lines Defaults to "matID".}
+
+\item{patID}{Character string specifying the column name for paternal lines Defaults to "patID".}
+
+\item{twinID}{Character string specifying the column name for twin IDs. Defaults to "twinID".}
+
+\item{focal_fill_column}{Character string specifying the column name for focal fill color.}
+
+\item{overlay_column}{Character string specifying the column name for overlay alpha values.}
+
+\item{status_column}{Character string specifying the column name for affected status. Defaults to NULL.}
 
 \item{config}{A list of configuration options for customizing the plot. The list can include:
 \describe{
    \item{code_male}{Integer or string. Value identifying males in the sex column. (typically 0 or 1) Default: 1.}
-   \item{segment_spouse_color, segment_self_color, segment_sibling_color, segment_parent_color, segment_offspring_color}{Character. Line colors for respective connection types.}
-   \item{label_text_size, point_size, line_width}{Numeric. Controls text size, point size, and line thickness.}
+   \item{segment_spouse_color, segment_self_color}{Character. Line colors for respective connection types.}
+   \item{segment_sibling_color, segment_parent_color, segment_offspring_color}{Character. Line colors for respective connection types.}
+   \item{label_text_size, point_size, segment_linewidth}{Numeric. Controls text size, point size, and line thickness.}
    \item{generation_height}{Numeric. Vertical spacing multiplier between generations. Default: 1.}
-   \item{shape_unknown, shape_female, shape_male, affected_shape}{Integers. Shape codes for plotting each group.}
-   \item{sex_shape_labs}{Character vector of labels for the sex variable. (default: c("Female", "Male", "Unknown")}
+   \item{shape_unknown, shape_female, shape_male, status_shape_affected}{Integers. Shape codes for plotting each group.}
+   \item{sex_shape_labels}{Character vector of labels for the sex variable. (default: c("Female", "Male", "Unknown")}
    \item{unaffected, affected}{Values indicating unaffected/affected status.}
-   \item{sex_color}{Logical. If TRUE, uses color to differentiate sex.}
+   \item{sex_color_include}{Logical. If TRUE, uses color to differentiate sex.}
    \item{label_max_overlaps}{Maximum number of overlaps allowed in repelled labels.}
    \item{label_segment_color}{Color used for label connector lines.}
  }}

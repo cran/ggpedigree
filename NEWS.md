@@ -1,5 +1,43 @@
+# ggpedigree 0.7.0
+* Changed the default behavior of `ggPedigree` to use x_fam and y_fam for positioning families, rather than x_midparent and y_midparent. This change allows for better visualization of pedigrees with multiple families.
+* Changed the get midpoint of curvature to better approximate geom_curv behavior.
+* reduced redundancy in code base by not calculating the parent midpoints when not needed.
+* Added default_config support for ggRelatednessMatrix functions.
+
+# ggpedigree 0.6.1
+* Transferred `plotPedigree()` function from BGmisc to ggpedigree.
+
+# ggpedigree 0.6.0
+* Implemented fill by matID, patID using several scales, such as hue, viridis, and others.
+* Added support for emojis in the `ggpedigree` function.
+* Solved the bug that created excessive branches
+* Made the twin sibling segments smarter
+* Adding more debug support
+
+# ggpedigree 0.5.1
+* Fix tooltip appearing in `ggPedigreeInteractive` when tooltip_include is set to FALSE.
+
+# ggpedigree 0.5.0
+* Added segment_linetype and custom affected labels to the `ggpedigree` function.
+* Added usage of color_palette to the `ggpedigree` function.
+* Added curvature option to the `ggpedigree` function.
+* Add support for custom affected labels for affected individuals in the `ggpedigree` function.
+* Add support for removing diagonal, upper triangle, and lower triangle in the `ggRelatednessMatrix` function. 
+* Add support for labeling tiles
+* Added new tests for the `ggRelatednessMatrix` function.
+* Added new phenotype plotting function `ggPhenotypebyDegree` to visualize phenotypes by degree of relatedness.
+* Added new vignette to demonstrate `ggPhenotypebyDegree`.
+* Added a new function `getDefaultPlotConfig` to set default configuration options for the package.
+* Harmonized the configuration options across the package to use `getDefaultPlotConfig` and buildPlotConfig
+* Added unit tests for `getDefaultPlotConfig` and `ggPhenotypebyDegree`
+* Added workaround for plotly non-support for geom_curve with computeCurvedMidpoint
+* Adding fully twin plotting features
+* Added ability to fill colors as a function of the degree of relatedness to a focal person
+* Add getDefaultPlotConfig functionality to ggPhenotypebyDegree
+* Fully documented getDefaultPlotConfig so that each config option is clear and understandable.
+
 # ggpedigree 0.4.1
-## Status: Active
+## Status: Submitted to CRAN
 * Fixed a bug in the `ggpedigree` function that caused an error when using a custom ID name and requesting the plot to be returned as a ggplot object.
 
 # ggpedigree 0.4.0

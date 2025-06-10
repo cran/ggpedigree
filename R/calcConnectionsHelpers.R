@@ -74,6 +74,7 @@ getMidpoints <- function(data,
                          require_non_missing = group_vars) {
   # -----
   # Filter for complete data if requested
+  # -----
   if (!is.null(require_non_missing)) {
     data <- data |>
       dplyr::filter(dplyr::if_all(
@@ -112,47 +113,47 @@ getMidpoints <- function(data,
         !!y_out := stats::weighted.mean(c(!!!rlang::syms(y_vars)), na.rm = TRUE),
         .groups = "drop"
       )
-  } else if (method == "first_pair") {
-    # Use only the first value in each pair of x/y coordinates
-    # This is useful for spousal pairs or sibling groups
-    data |>
-      dplyr::group_by(!!!rlang::syms(group_vars)) |>
-      dplyr::summarize(
-        !!x_out := mean(
-          c(
-            dplyr::first(.data[[x_vars[1]]]),
-            dplyr::first(.data[[x_vars[2]]])
-          ),
-          na.rm = TRUE
-        ),
-        !!y_out := mean(
-          c(
-            dplyr::first(.data[[y_vars[1]]]),
-            dplyr::first(.data[[y_vars[2]]])
-          ),
-          na.rm = TRUE
-        ),
-        .groups = "drop"
-      )
-  } else if (method == "meanxfirst") {
-    # Use the mean of all x coordinates and the first y coordinate
-    data |>
-      dplyr::group_by(!!!rlang::syms(group_vars)) |>
-      dplyr::summarize(!!x_out := mean(c(!!!rlang::syms(x_vars)), na.rm = TRUE), !!y_out := mean(c(
-        dplyr::first(.data[[y_vars[1]]]), dplyr::first(.data[[y_vars[2]]])
-      ), na.rm = TRUE),
-      .groups = "drop"
-      )
-  } else if (method == "meanyfirst") {
-    # First x, mean of all y
-    data |>
-      dplyr::group_by(!!!rlang::syms(group_vars)) |>
-      dplyr::summarize(
-        !!x_out := mean(c(
-          dplyr::first(.data[[x_vars[1]]]), dplyr::first(.data[[x_vars[2]]])
-        ), na.rm = TRUE), !!y_out := mean(c(!!!rlang::syms(y_vars)), na.rm = TRUE),
-        .groups = "drop"
-      )
+    # } else if (method == "first_pair") {
+    #   # Use only the first value in each pair of x/y coordinates
+    #   # This is useful for spousal pairs or sibling groups
+    #   data |> dplyr::filter(!is.na(.data[[group_vars]])) |>
+    #     dplyr::group_by(!!!rlang::syms(group_vars)) |>
+    #     dplyr::summarize(
+    #       !!x_out := mean(
+    #         c(
+    #           dplyr::first(.data[[x_vars[1]]]),
+    #          dplyr::first(.data[[x_vars[2]]])
+    #         ),
+    #         na.rm = TRUE
+    #       ),
+    #      !!y_out := mean(
+    #         c(
+    #          dplyr::first(.data[[y_vars[1]]]),
+    #           dplyr::first(.data[[y_vars[2]]])
+    #         ),
+    #         na.rm = TRUE
+    #       ),
+    #       .groups = "drop"
+    #     )
+    # } else if (method == "meanxfirst") {
+    #   # Use the mean of all x coordinates and the first y coordinate
+    #   data |> dplyr::filter(!is.na(.data[[group_vars]])) |>
+    #     dplyr::group_by(!!!rlang::syms(group_vars)) |>
+    #     dplyr::summarize(!!x_out := mean(c(!!!rlang::syms(x_vars)), na.rm = TRUE), !!y_out := mean(c(
+    #       dplyr::first(.data[[y_vars[1]]]), dplyr::first(.data[[y_vars[2]]])
+    #     ), na.rm = TRUE),
+    #     .groups = "drop"
+    #     )
+    # } else if (method == "meanyfirst") {
+    #   # First x, mean of all y
+    #   data |> dplyr::filter(!is.na(.data[[group_vars]])) |>
+    #     dplyr::group_by(!!!rlang::syms(group_vars)) |>
+    #     dplyr::summarize(
+    #       !!x_out := mean(c(
+    #         dplyr::first(.data[[x_vars[1]]]), dplyr::first(.data[[x_vars[2]]])
+    #       ), na.rm = TRUE), !!y_out := mean(c(!!!rlang::syms(y_vars)), na.rm = TRUE),
+    #       .groups = "drop"
+    #     )
   } else {
     # Handle unsupported method argument
     stop("Unsupported method.")
@@ -194,8 +195,12 @@ getRelativeCoordinates <- function(ped,
                                    only_unique = TRUE) {
   # Filter only rows where the relative ID is not missing
   # and join with the main pedigree data frame
-  rel_connections <- connections |>
-    dplyr::filter(!is.na(.data[[relativeIDvar]])) |>
+  tem_connections <- connections |>
+    dplyr::filter(!is.na(.data[[relativeIDvar]]))
+  if (only_unique == TRUE) {
+    tem_connections <- unique(tem_connections)
+  }
+  rel_connections <- tem_connections |>
     # Join in the relative's coordinates from `ped`, based on relative ID
     dplyr::left_join(
       ped,
