@@ -1,5 +1,6 @@
 test_that("ggPedigreeInteractive behaves same as ggPedigree interactive is true without twins", {
   library(BGmisc)
+
   data("potter") # load example data from BGmisc
   if ("twinID" %in% names(potter) && "zygosity" %in% names(potter)) {
     # Remove twinID and zygosity columns for this test
@@ -48,6 +49,7 @@ test_that("ggPedigreeInteractive behaves same as ggPedigree interactive is true 
 
 test_that("ggPedigreeInteractive behaves same as ggPedigree interactive is true with twins", {
   library(BGmisc)
+  library(tidyverse)
   data("potter") # load example data from BGmisc
   if (!"twinID" %in% names(potter) || !"zygosity" %in% names(potter)) {
     # Add twinID and zygosity columns for demonstration purposes
@@ -162,7 +164,7 @@ test_that("ggPedigreeInteractive returns a gg object", {
     matID = "matID",
     config = list(
       label_nudge_y = -.25,
-      labels_include = TRUE,
+      label_include = TRUE,
       label_method = "geom_text",
       sex_color_include = TRUE,
       return_static = TRUE
@@ -248,7 +250,7 @@ test_that("ggPedigreeInteractive returns a gg object for consang", {
     #  matID = "matID",
     config = list(
       label_nudge_y = -.25,
-      labels_include = TRUE,
+      label_include = TRUE,
       override_many2many = TRUE,
       label_method = "geom_text",
       sex_color_include = TRUE,

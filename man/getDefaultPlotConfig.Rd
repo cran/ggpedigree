@@ -47,9 +47,12 @@ getDefaultPlotConfig(
   label_text_angle = 0,
   label_text_size = 2,
   label_text_color = "black",
+  label_text_family = "sans",
   point_size = 4,
   outline_include = FALSE,
   outline_multiplier = 1.25,
+  outline_additional_size = 0,
+  outline_alpha = 1,
   outline_color = "black",
   tooltip_include = TRUE,
   tooltip_columns = c("ID1", "ID2", "value"),
@@ -59,6 +62,7 @@ getDefaultPlotConfig(
   axis_text_angle_y = 0,
   axis_text_size = 8,
   axis_text_color = "black",
+  axis_text_family = "sans",
   generation_height = 1,
   generation_width = 1,
   ped_packed = TRUE,
@@ -135,6 +139,9 @@ getDefaultPlotConfig(
   focal_fill_viridis_begin = 0,
   focal_fill_viridis_end = 1,
   focal_fill_viridis_direction = 1,
+  focal_fill_color_values = c("#052f60", "#e69f00", "#56b4e9", "#009e73", "#f0e442",
+    "#0072b2", "#d55e00", "#cc79a7"),
+  focal_fill_labels = c("Low", "Mid", "High"),
   ci_include = TRUE,
   ci_ribbon_alpha = 0.3,
   tile_color_palette = c("white", "gold", "red"),
@@ -142,6 +149,8 @@ getDefaultPlotConfig(
   tile_color_border = NA,
   tile_cluster = TRUE,
   tile_geom = "geom_tile",
+  tile_na_rm = FALSE,
+  tile_linejoin = "mitre",
   matrix_diagonal_include = TRUE,
   matrix_upper_triangle_include = FALSE,
   matrix_lower_triangle_include = TRUE,
@@ -241,11 +250,17 @@ getDefaultPlotConfig(
 
 \item{label_text_color}{Color of the label text.}
 
+\item{label_text_family}{Font family for label text.}
+
 \item{point_size}{Size of points drawn in plot.}
 
 \item{outline_include}{Whether to include outlines around points.}
 
 \item{outline_multiplier}{Multiplier to compute outline size from point size.}
+
+\item{outline_additional_size}{Additional size added to outlines.}
+
+\item{outline_alpha}{Alpha transparency for point outlines.}
 
 \item{outline_color}{Color used for point outlines.}
 
@@ -264,6 +279,8 @@ getDefaultPlotConfig(
 \item{axis_text_size}{Font size of axis text.}
 
 \item{axis_text_color}{Color of axis text.}
+
+\item{axis_text_family}{Font family for axis text.}
 
 \item{generation_height}{Vertical spacing of generations.}
 
@@ -417,6 +434,10 @@ getDefaultPlotConfig(
 
 \item{focal_fill_viridis_direction}{Direction of viridis color scale (1 for left to right, -1 for right to left).}
 
+\item{focal_fill_color_values}{A character vector of colors for focal fill.}
+
+\item{focal_fill_labels}{Labels for focal fill colors.}
+
 \item{ci_include}{Whether to show confidence intervals.}
 
 \item{ci_ribbon_alpha}{Alpha level for CI ribbons.}
@@ -430,6 +451,10 @@ getDefaultPlotConfig(
 \item{tile_cluster}{Whether to sort by clusters the matrix.}
 
 \item{tile_geom}{Geometry type for matrix tiles (e.g., "geom_tile", "geom_raster").}
+
+\item{tile_na_rm}{Whether to remove NA values in matrix tiles.}
+
+\item{tile_linejoin}{Line join type for matrix tiles.}
 
 \item{matrix_diagonal_include}{Whether to include diagonal in matrix plots.}
 

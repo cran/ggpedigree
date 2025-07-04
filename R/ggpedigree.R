@@ -6,8 +6,8 @@
 #' supports multiple families and optionally displays affected status and sex-based color/shape.
 #'
 #' @param ped A data frame containing the pedigree data. Needs personID, momID, and dadID columns
-#' @param famID Character string specifying the column name for family IDs.
-#' @param personID Character string specifying the column name for individual IDs.
+#' @param famID Character string specifying the column name for family IDs. Defaults to "famID".
+#' @param personID Character string specifying the column name for individual IDs. Defaults to "personID".
 #' @param momID Character string specifying the column name for mother IDs. Defaults to "momID".
 #' @param dadID Character string specifying the column name for father IDs. Defaults to "dadID".
 #' @param spouseID Character string specifying the column name for spouse IDs. Defaults to "spouseID".
@@ -27,9 +27,10 @@
 #'        If FALSE, returns the underlying plotly object (useful for further
 #'        customization before printing).
 #' @param focal_fill_column Character string specifying the column name for focal fill color.
-#'
+#' @param phantoms Logical. If TRUE, adds phantom parents for individuals without parents.
 #' @param ... Additional arguments passed to `ggplot2` functions.
-#' @param config A list of configuration options for customizing the plot. The list can include:
+#' @param config A list of configuration options for customizing the plot.
+#'        See getDefaultPlotConfig for details. The list can include:
 #'  \describe{
 #'     \item{code_male}{Integer or string. Value identifying males in the sex column. (typically 0 or 1) Default: 1.}
 #'     \item{segment_spouse_color, segment_self_color}{Character. Line colors for respective connection types.}
@@ -37,7 +38,7 @@
 #'     \item{label_text_size, point_size, segment_linewidth}{Numeric. Controls text size, point size, and line thickness.}
 #'     \item{generation_height}{Numeric. Vertical spacing multiplier between generations. Default: 1.}
 #'     \item{shape_unknown, shape_female, shape_male, status_shape_affected}{Integers. Shape codes for plotting each group.}
-#'     \item{sex_shape_labels}{Character vector of labels for the sex variable. (default: c("Female", "Male", "Unknown")}
+#'     \item{sex_shape_labels}{Character vector of labels for the sex variable. (default: c("Female", "Male", "Unknown"))}
 #'     \item{unaffected, affected}{Values indicating unaffected/affected status.}
 #'     \item{sex_color_include}{Logical. If TRUE, uses color to differentiate sex.}
 #'     \item{label_max_overlaps}{Maximum number of overlaps allowed in repelled labels.}
@@ -54,7 +55,9 @@
 #' ggPedigree(hazard, famID = "famID", personID = "ID", config = list(code_male = 0))
 #'
 #' @export
-#' @import ggplot2 dplyr BGmisc ggrepel
+#' @import ggplot2
+#' @importFrom dplyr mutate filter left_join select join_by case_when rename
+#' @importFrom BGmisc ped2fam ped2paternal ped2maternal recodeSex checkParentIDs
 #' @importFrom rlang sym
 #' @importFrom utils modifyList
 #'
@@ -76,6 +79,7 @@ ggPedigree <- function(ped,
                        debug = FALSE,
                        hints = NULL,
                        interactive = FALSE,
+                       phantoms = FALSE,
                        ...) {
   if (!inherits(ped, "data.frame")) {
     stop("ped should be a data.frame or inherit to a data.frame")
@@ -103,6 +107,7 @@ ggPedigree <- function(ped,
       hints = hints,
       return_widget = return_widget,
       tooltip_columns = tooltip_columns,
+      phantoms = phantoms,
       ...
     )
   } else {
@@ -139,6 +144,7 @@ ggPedigree <- function(ped,
       config = config,
       debug = debug,
       hints = hints,
+      phantoms = phantoms,
       ...
     )
   }
@@ -152,6 +158,7 @@ ggPedigree <- function(ped,
 #' It is not intended to be called directly by users.
 #'
 #' @inheritParams ggPedigree
+#'
 #' @keywords internal
 
 
@@ -170,6 +177,7 @@ ggPedigree.core <- function(ped, famID = "famID",
                             debug = FALSE,
                             hints = NULL,
                             function_name = "ggPedigree",
+                            phantoms = FALSE,
                             ...) {
   # -----
   # STEP 1: Configuration and Preparation
@@ -177,34 +185,35 @@ ggPedigree.core <- function(ped, famID = "famID",
   if (!inherits(ped, "data.frame")) {
     stop("ped should be a data.frame or inherit to a data.frame")
   }
-  if (debug == TRUE || config$debug == TRUE) {
+
+  config$debug <- isTRUE(debug) || isTRUE(config$debug)
+
+  if (config$debug == TRUE) {
     message("Debug mode is ON. Debugging information will be printed.")
-    config$debug <- TRUE
-  } else {
-    config$debug <- FALSE
   }
+  # add matches for fill groups
+  fill_group_maternal <- c("maternal", "matID", "maternal line", "maternal lineages", "maternal lines")
+  fill_group_paternal <- c("paternal", "patID", "paternal line", "paternal lineages", "paternal lines")
+  fill_group_family <- c("famID", "family", "family lineages", "family lines", "family line")
+
+
   # -----
   # STEP 2: Pedigree Data Transformation
   # -----
 
-
-
-  if (all(c(famID, patID, matID) %in% names(ped))) {
-    ds_ped <- ped
+  if (!all(c(famID, patID, matID) %in% names(ped)) && !famID %in% names(ped)) {
+    ds_ped <- BGmisc::ped2fam(ped,
+      famID = famID,
+      personID = personID,
+      momID = momID,
+      dadID = dadID
+    )
   } else {
-    if (!famID %in% names(ped)) {
-      ds_ped <- BGmisc::ped2fam(ped,
-        famID = famID,
-        personID = personID,
-        momID = momID,
-        dadID = dadID
-      )
-    } else {
-      ds_ped <- ped
-    }
+    ds_ped <- ped
   }
+
   if (config$focal_fill_include == TRUE) {
-    if (!patID %in% names(ds_ped)) {
+    if (!patID %in% names(ds_ped) && config$focal_fill_component %in% fill_group_paternal) {
       ds_ped <- BGmisc::ped2paternal(ds_ped,
         patID = patID,
         personID = personID,
@@ -212,7 +221,8 @@ ggPedigree.core <- function(ped, famID = "famID",
         dadID = dadID
       )
     }
-    if (!matID %in% names(ds_ped)) {
+
+    if (!matID %in% names(ds_ped) && config$focal_fill_component %in% fill_group_maternal) {
       ds_ped <- BGmisc::ped2maternal(ds_ped,
         matID = matID,
         personID = personID,
@@ -222,32 +232,14 @@ ggPedigree.core <- function(ped, famID = "famID",
     }
   }
 
-  # Clean duplicated famID columns if present
-
-  #  if ("famID.y" %in% names(ds_ped)) {
-  #   ds_ped <- dplyr::select(.data = ds_ped, -"famID.y")
-  #  }
-  #  if ("famID.x" %in% names(ds_ped)) {
-  #    ds_ped <- dplyr::rename(.data = ds_ped, famID = "famID.x")
-  # }
 
   # ----
   # STEP 3: Data Cleaning and Recoding
   # ----
 
 
-  # Standardize sex variable using code_male convention
-  ds_ped <- BGmisc::recodeSex(ds_ped,
-    recode_male = config$code_male
-  )
-
-  # If personID is not "personID", rename to "personID" internally
-  #  if (personID != "personID") {
-  #   ds_ped <- dplyr::rename(ds_ped, personID = !!personID)
-  #  }
-
-
   # Recode affected status into factor, if applicable
+
   if (!is.null(status_column)) {
     ds_ped[[status_column]] <- factor(
       ds_ped[[status_column]],
@@ -255,6 +247,26 @@ ggPedigree.core <- function(ped, famID = "famID",
       labels = config$status_labels
     )
   }
+
+  # Standardize sex variable using code_male convention
+  ds_ped <- BGmisc::recodeSex(ds_ped,
+    recode_male = config$code_male
+  )
+
+  if (phantoms == TRUE) {
+    # If phantoms are requested, add phantom parents
+    ds_ped <- BGmisc::checkParentIDs(ds_ped,
+      addphantoms = TRUE,
+      repair = TRUE,
+      parentswithoutrow = FALSE,
+      repairsex = FALSE,
+      personID = personID,
+      momID = momID,
+      dadID = dadID,
+      famID = famID
+    )
+  }
+
   if (config$focal_fill_include == TRUE && is.null(focal_fill_column)) {
     # If fill_column is specified but not in ds_ped, use personID as fill
     if (config$focal_fill_component %in% c(
@@ -268,8 +280,8 @@ ggPedigree.core <- function(ped, famID = "famID",
       # and the personID.
       # The function createFillColumn will handle the logic of creating the fill column
       # based on the component and personID.
-      ds_ped <- ds_ped %>%
-        left_join(
+      ds_ped <- ds_ped |>
+        dplyr::left_join(
           createFillColumn(
             ped = ds_ped,
             focal_fill_personID = config$focal_fill_personID,
@@ -277,63 +289,41 @@ ggPedigree.core <- function(ped, famID = "famID",
             component = config$focal_fill_component,
             config = config
           ),
-          by = join_by(
+          by = dplyr::join_by(
             personID == !!rlang::sym(personID)
           )
         )
     } else if (config$focal_fill_component %in% c(
-      "maternal",
-      "matID", matID, patID, famID,
-      "patID",
-      "paternal",
-      "famID",
-      "paternal line", "maternal line",
-      "maternal lineages", "paternal lineages",
-      "family", "family lineages"
+      fill_group_family, fill_group_maternal, fill_group_paternal,
+      matID, patID, famID
     )
     ) {
-      config$focal_fill_component_recode <- switch(config$focal_fill_component,
-        "maternal" = matID,
-        "paternal" = patID,
-        "famID" = famID,
-        "matID" = matID,
-        "patID" = patID,
-        "paternal line" = patID,
-        "maternal line" = matID,
-        "paternal lineages" = patID,
-        "maternal lineages" = matID,
-        "family" = famID,
-        "family lineages" = famID,
-        matID = matID,
-        patID = patID,
-        famID = famID
-      )
       # If focal_fill_component is specified, create fill column based on component
       # This will create a fill column based on the component specified in the config
-      switch(config$focal_fill_component_recode,
-        matID = {
-          # If focal_fill_component is maternal, use matID as fill
-          ds_ped <- ds_ped %>%
-            dplyr::mutate(focal_fill = as.factor(.data[[matID]]))
-          #  focal_fill_column <- "matID"
-        },
-        patID = {
-          # If focal_fill_component is paternal, use patID as fill
-          ds_ped <- ds_ped %>%
-            dplyr::mutate(focal_fill = as.factor(.data[[patID]]))
-          #  focal_fill_column <- "patID"
-        },
-        famID = {
-          # If focal_fill_component is famID, use famID as fill
-          ds_ped <- ds_ped %>%
-            dplyr::mutate(focal_fill = as.factor(.data[[famID]]))
-          # focal_fill_column <- "famID"
-        }
-      )
+      if (config$focal_fill_component %in% fill_group_maternal) {
+        config$focal_fill_component_recode <- matID
+        # If focal_fill_component is maternal, use matID as fill
+        ds_ped <- ds_ped |>
+          dplyr::mutate(focal_fill = as.factor(.data[[matID]]))
+      }
+      if (config$focal_fill_component %in% fill_group_paternal) {
+        config$focal_fill_component_recode <- patID
+
+        # If focal_fill_component is paternal, use patID as fill
+        ds_ped <- ds_ped |>
+          dplyr::mutate(focal_fill = as.factor(.data[[patID]]))
+      }
+      if (config$focal_fill_component %in% fill_group_family) {
+        config$focal_fill_component_recode <- famID
+
+        # If focal_fill_component is famID, use famID as fill
+        ds_ped <- ds_ped |>
+          dplyr::mutate(focal_fill = as.factor(.data[[famID]]))
+      }
     }
   } else if (config$focal_fill_include == TRUE && !is.null(focal_fill_column)) {
     # If fill_column is specified, use it directly
-    ds_ped <- ds_ped %>%
+    ds_ped <- ds_ped |>
       dplyr::mutate(focal_fill = !!rlang::sym(focal_fill_column))
   }
   # -----
@@ -350,15 +340,18 @@ ggPedigree.core <- function(ped, famID = "famID",
     config = config,
     twinID = twinID
   )
+  if (config$debug == TRUE) {
+    message("Coordinates calculated. Number of individuals: ", nrow(ds))
 
-  # Apply vertical spacing factor if generation_height ≠ 1
-  if (!isTRUE(all.equal(config$generation_height, 1))) {
-    ds$y_pos <- ds$y_pos * config$generation_height # expand/contract generations
+    # assign("DEBUG_ds", ds, envir = .GlobalEnv)
   }
-  # Apply horizontal spacing factor if generation_width ≠ 1
-  if (!isTRUE(all.equal(config$generation_width, 1))) {
-    ds$x_pos <- ds$x_pos * config$generation_width # expand/contract generations
-  }
+  # Apply spacing factors
+  ds <- .adjustSpacing(
+    ds = ds,
+    config = config
+  )
+
+
   # -----
   # STEP 5: Compute Relationship Connections
   # -----
@@ -374,33 +367,23 @@ ggPedigree.core <- function(ped, famID = "famID",
   )
 
   connections <- plot_connections$connections
+
   if (config$debug == TRUE) {
     message("Connections calculated. Number of connections: ", nrow(connections))
 
     # assign("DEBUG_connections", connections, envir = .GlobalEnv)
   }
   # restore names
-  if (personID != "personID") {
-    # Rename personID to the user-specified name
-    names(connections)[names(connections) == "personID"] <- personID
-  }
-  if (momID != "momID") {
-    # Rename momID to the user-specified name
-    names(connections)[names(connections) == "momID"] <- momID
-  }
-  if (dadID != "dadID") {
-    # Rename dadID to the user-specified name
-    names(connections)[names(connections) == "dadID"] <- dadID
-  }
-  if ("spouseID" %in% names(connections) && spouseID != "spouseID") {
-    # Rename spouseID to the user-specified name
-    names(connections)[names(connections) == "spouseID"] <- spouseID
-  }
-  # Rename famID to the user-specified name
-  if (famID != "famID") {
-    # Rename famID to the user-specified name
-    names(connections)[names(connections) == "famID"] <- famID
-  }
+  connections <- .restoreNames(
+    connections = connections,
+    personID = personID,
+    momID = momID,
+    dadID = dadID,
+    spouseID = spouseID,
+    twinID = twinID,
+    famID = famID
+  )
+
 
 
   # -----
@@ -564,24 +547,20 @@ ggPedigree.core <- function(ped, famID = "famID",
   # -----
 
   # Add point layers for each individual in the pedigree.
-  # The appearance (color and shape) depends on two factors:
-  # 1. Whether `sex_color_include` is enabled — this controls whether sex is encoded via both color and shape.
-  # 2. Whether `status_column` is specified — this controls whether affected status is visualized.
-
-  # There are three main rendering branches:
-  #   1. If sex_color_include == TRUE: color and shape reflect sex, and affected status is shown with a second symbol.
-  #   2. If sex_color_include == FALSE but status_column is present: shape reflects sex, and color reflects affected status.
-  #   3. If neither is used: plot individuals using shape alone.
   p <- .addNodes(
     p = p,
     config = config,
     focal_fill_column = focal_fill_column,
     status_column = status_column
   )
+
   # Add overlay points for affected status if applicable
   if (config$sex_color_include == TRUE ||
     config$focal_fill_include == TRUE ||
-    config$overlay_include == TRUE) {
+    config$overlay_include == TRUE ||
+    (!is.null(status_column) && config$status_include == TRUE)
+
+  ) {
     # If overlay_column is specified, use it for alpha aesthetic
 
     p <- .addOverlay(
@@ -649,7 +628,8 @@ ggPedigree.core <- function(ped, famID = "famID",
       focal_fill_column = focal_fill_column
     )
   }
-
+  # add plot_connections to the plot object
+  attr(p, "connections") <- plot_connections
   if (config$debug == TRUE) {
     return(list(
       plot = p,
@@ -659,6 +639,7 @@ ggPedigree.core <- function(ped, famID = "famID",
     ))
   } else {
     # If debug is FALSE, return only the plot
+
     return(p)
   }
 }
@@ -682,9 +663,10 @@ ggpedigree <- ggPedigree
         ggplot2::aes(
           shape = as.factor(.data$sex)
         ),
-        size = config$point_size * config$outline_multiplier,
+        size = config$point_size * config$outline_multiplier + config$outline_additional_size,
         na.rm = TRUE,
         color = config$outline_color,
+        alpha = config$outline_alpha,
         stroke = config$segment_linewidth
       )
   }
@@ -839,7 +821,7 @@ ggpedigree <- ggPedigree
 
     otherself <- otherself |>
       dplyr::mutate(
-        midpoint = computeCurvedMidpoint(
+        midpoint = .computeCurvedMidpoint(
           x0 = .data$x_otherself,
           y0 = .data$y_otherself,
           x1 = .data$x_pos,
@@ -852,7 +834,7 @@ ggpedigree <- ggPedigree
         y_1midpoint = .data$midpoint$y
       ) |>
       dplyr::mutate(
-        midpoint = computeCurvedMidpoint(
+        midpoint = .computeCurvedMidpoint(
           x0 = .data$x_otherself,
           y0 = .data$y_otherself,
           x1 = .data$x_pos,
@@ -865,7 +847,7 @@ ggpedigree <- ggPedigree
         y_2midpoint = .data$midpoint$y
       ) |>
       dplyr::mutate(
-        midpoint = computeCurvedMidpoint(
+        midpoint = .computeCurvedMidpoint(
           x0 = .data$x_otherself,
           y0 = .data$y_otherself,
           x1 = .data$x_pos,
@@ -994,7 +976,7 @@ ggpedigree <- ggPedigree
         shape = config$sex_legend_title
       )
   } else if (config$focal_fill_include == TRUE) {
-    if (config$focal_fill_method %in% c("steps", "steps2")) {
+    if (config$focal_fill_method %in% c("steps", "steps2", "step", "step2")) {
       p <- p + ggplot2::scale_colour_steps2(
         low = config$focal_fill_low_color,
         mid = config$focal_fill_mid_color,
@@ -1085,17 +1067,28 @@ ggpedigree <- ggPedigree
 #' @keywords internal
 #'
 .addLabels <- function(p, config) {
-  if (config$label_method %in% c("geom_text_repel", "ggrepel", "geom_label_repel")
+  if (!requireNamespace("ggrepel", quietly = TRUE) &&
+    config$label_method %in% c("geom_text_repel", "ggrepel", "geom_label_repel")) {
+    warning("The 'ggrepel' package is required for label methods 'geom_text_repel', 'ggrepel', and 'geom_label_repel'. Please install it using install.packages('ggrepel').")
+
+    config$label_method <- "geom_text" # fallback to geom_text if ggrepel is not available
+  }
+
+  if (config$label_method %in% c("geom_text_repel", "ggrepel", "geom_label_repel") && requireNamespace("ggrepel", quietly = TRUE)
   ) {
+    # If ggrepel is available, use geom_text_repel or geom_label_repel
+    # for better label placement and avoidance of overlaps
     p <- p +
       ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(config$label_column)),
         nudge_y = config$label_nudge_y * config$generation_height,
         nudge_x = config$label_nudge_x * config$generation_width,
         size = config$label_text_size,
+        color = config$label_text_color,
         na.rm = TRUE,
         max.overlaps = config$label_max_overlaps,
         segment.size = config$segment_linewidth * .5,
         angle = config$label_text_angle,
+        family = config$label_text_family,
         segment.color = config$label_segment_color
       )
   } else if (config$label_method == "geom_label") {
@@ -1103,7 +1096,9 @@ ggpedigree <- ggPedigree
       ggplot2::geom_label(ggplot2::aes(label = !!rlang::sym(config$label_column)),
         nudge_y = config$label_nudge_y * config$generation_height,
         nudge_x = config$label_nudge_x * config$generation_width,
+        color = config$label_text_color,
         size = config$label_text_size,
+        family = config$label_text_family,
         angle = config$label_text_angle,
         na.rm = TRUE
       )
@@ -1112,6 +1107,8 @@ ggpedigree <- ggPedigree
       ggplot2::geom_text(ggplot2::aes(label = !!rlang::sym(config$label_column)),
         nudge_y = config$label_nudge_y * config$generation_height,
         nudge_x = config$label_nudge_x * config$generation_width,
+        color = config$label_text_color,
+        family = config$label_text_family,
         size = config$label_text_size,
         angle = config$label_text_angle,
         na.rm = TRUE
@@ -1143,58 +1140,6 @@ ggpedigree <- ggPedigree
 #   config <- utils::modifyList(default_config, config)
 #
 # }
-#' @title Compute midpoint coordinate for curved segment
-#' @description Returns x and y midpoint using vectorized curved offset
-#' @param x0 Numeric vector of x coordinates for start points
-#' @param y0 Numeric vector of y coordinates for start points
-#' @param x1 Numeric vector of x coordinates for end points
-#' @param y1 Numeric vector of y coordinates for end points
-#' @param t Scalar value between 0 and 1 for interpolation (default is 0.5) setting the midpoint
-#' @param curvature Scalar curvature (geom_curve style)
-#' @param angle Scalar angle in degrees
-#' @param shift Scalar shift in degrees (default is 0)
-#' @return Numeric vector of midpoints (x or y)
-#'  @keywords internal
-computeCurvedMidpoint <- function(x0, y0, x1, y1,
-                                  curvature, angle, shift = 0,
-                                  t = 0.5) {
-  # Ensure t is a numeric vector
-  t <- as.numeric(t)
-
-  # Vector from start to end
-  dx <- x1 - x0
-  dy <- y1 - y0
-  len <- sqrt(dx^2 + dy^2)
-
-  # Midpoint of the segment
-  mx <- (x0 + x1) / 2
-  my <- (y0 + y1) / 2
-
-  # Unit direction vector
-  ux <- dx / len
-  uy <- dy / len
-
-  # Perpendicular unit vector
-  perp_x <- -uy
-  perp_y <- ux
-
-  # Apply rotation: angle + shift
-  theta <- (angle + shift) * pi / 180
-
-  rot_x <- perp_x * cos(theta) - perp_y * sin(theta)
-  rot_y <- perp_x * sin(theta) + perp_y * cos(theta)
-
-  # Control point (defines curvature)
-  cx <- mx + curvature * len * rot_x
-  cy <- my + curvature * len * rot_y
-
-  # Quadratic Bezier formula, vectorized
-  x_vals <- (1 - t)^2 * x0 + 2 * (1 - t) * t * cx + t^2 * x1
-  y_vals <- (1 - t)^2 * y0 + 2 * (1 - t) * t * cy + t^2 * y1
-
-  # Return as a data frame with x and y coordinates
-  data.frame(x = x_vals, y = y_vals, t = t)
-}
 
 #' @title Get fill column for ggPedigree
 #' @description
@@ -1224,21 +1169,20 @@ createFillColumn <- function(ped,
     sparse = config$matrix_sparse
   )
 
-  if (config$matrix_sparse == FALSE) {
-    fill_df <- data.frame(
-      focal_fill = round(com_mat[focal_fill_personID, ], digits = config$value_rounding_digits),
-      personID = rownames(com_mat)
-    ) # needs to match the same data type
-    remove(com_mat) # remove the focal_fill_personID column
-  } else if (config$matrix_sparse == TRUE) {
+  if (config$matrix_sparse == TRUE) {
     warning("Sparse matrix detected. Converting to data frame. Currently, sparse matrices are not supported for ggPedigree processing.")
     com_mat <- as.matrix(com_mat)
-    fill_df <- data.frame(
-      focal_fill = round(com_mat[focal_fill_personID, ], digits = config$value_rounding_digits),
-      personID = rownames(com_mat)
-    ) # needs to match the same data type
-    remove(com_mat)
   }
+  # find the row index of  ped that matches focal_fill_personID
+  row_index <- which(ped[[personID]] == focal_fill_personID)
+  if (length(row_index) == 0) {
+    stop(paste("focal_fill_personID", focal_fill_personID, "not found in ped$personID."))
+  }
+  fill_df <- data.frame(
+    focal_fill = round(com_mat[row_index, ], digits = config$value_rounding_digits),
+    personID = rownames(com_mat)
+  ) # needs to match the same data type
+  remove(com_mat) # remove the focal_fill_personID column
   # Ensure fill_df$personID is of the same type as ped$personID
   if (is.numeric(ped$personID)) {
     fill_df$personID <- as.numeric(fill_df$personID)

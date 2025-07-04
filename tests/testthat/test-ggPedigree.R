@@ -1,5 +1,6 @@
 test_that("broken hints doesn't cause a fatal error", {
   library(BGmisc)
+  library(tidyverse)
   data("potter") # load example data from BGmisc
   if ("twinID" %in% names(potter) && "zygosity" %in% names(potter)) {
     # Remove twinID and zygosity columns for this test
@@ -18,7 +19,7 @@ test_that("broken hints doesn't cause a fatal error", {
       personID = "personID",
       config = list(hints = TRUE)
     )
-  )
+  ) %>% suppressWarnings()
 
   if (!"twinID" %in% names(potter)) {
     # Add twinID and zygosity columns for demonstration purposes
@@ -43,11 +44,19 @@ test_that("broken hints doesn't cause a fatal error", {
   expect_warning(
     ggPedigree(potter,
       famID = "famID",
+      #  phantoms = TRUE, # not  in CRAN version
       personID = "personID",
-      config = list(hints = TRUE),
+      config = list(
+        hints = TRUE,
+        generation_width = 2,
+        generation_height = 2,
+        status_code_affected = "deceased",
+        status_code_unaffected = "alive",
+        status_include = TRUE
+      ),
       status_column = "status"
     )
-  )
+  ) %>% suppressWarnings()
 })
 
 test_that("ggPedigree returns a ggplot object", {
@@ -132,6 +141,7 @@ test_that("config$outline_include works", {
 # handle non-standard names
 test_that("ggPedigree handles non-standard names", {
   library(BGmisc)
+  library(tidyverse)
   data("potter") # load example data from BGmisc
 
   # Rename columns to non-standard names
@@ -182,7 +192,7 @@ test_that("ggPedigree handles self-segment", {
       generation_height = 4,
       point_size = 2,
       generation_width = 2,
-      status_affected_shape = 4,
+      status_shape_affected = 4,
       segment_self_color = "purple"
     )
   )
@@ -204,7 +214,7 @@ test_that("ggPedigree handles self-segment", {
       generation_height = 4,
       point_size = 2,
       generation_width = 2,
-      status_affected_shape = 4,
+      status_shape_affected = 4,
       segment_self_color = "purple"
     )
   )

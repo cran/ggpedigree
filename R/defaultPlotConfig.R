@@ -1,4 +1,3 @@
-# defaultPlotConfig.R
 #' @title Shared Default Plotting Configuration
 #' @description Centralized configuration list used by all gg-based plotting functions.
 #' Returns a named list of default settings used by all gg-based plotting functions.
@@ -48,9 +47,12 @@
 #' @param label_text_angle Text angle for labels.
 #' @param label_text_size Font size for labels.
 #' @param label_text_color Color of the label text.
+#' @param label_text_family Font family for label text.
 #' @param point_size Size of points drawn in plot.
 #' @param outline_include Whether to include outlines around points.
 #' @param outline_multiplier Multiplier to compute outline size from point size.
+#' @param outline_additional_size Additional size added to outlines.
+#' @param outline_alpha Alpha transparency for point outlines.
 #' @param outline_color Color used for point outlines.
 #' @param tooltip_include Whether tooltips are shown in interactive plots.
 #' @param tooltip_columns Columns to include in tooltips.
@@ -60,6 +62,7 @@
 #' @param axis_text_angle_y Angle of Y-axis text.
 #' @param axis_text_size Font size of axis text.
 #' @param axis_text_color Color of axis text.
+#' @param axis_text_family Font family for axis text.
 #' @param generation_height Vertical spacing of generations.
 #' @param generation_width Horizontal spacing of generations.
 #' @param ped_packed Whether the pedigree should use packed layout.
@@ -129,6 +132,8 @@
 #' @param focal_fill_na_value Color for NA values in focal fill.
 #' @param focal_fill_force_zero Whether to force zero to NA in focal fill.
 #' @param focal_fill_hue_range Hue range for focal fill colors.
+#' @param focal_fill_color_values A character vector of colors for focal fill.
+#' @param focal_fill_labels Labels for focal fill colors.
 #' @param focal_fill_chroma Chroma value for focal fill colors.
 #' @param focal_fill_lightness Lightness value for focal fill colors.
 #' @param focal_fill_hue_direction Direction of focal fill gradient.
@@ -143,6 +148,8 @@
 #' @param tile_interpolate Whether to interpolate colors in matrix tiles.
 #' @param tile_geom Geometry type for matrix tiles (e.g., "geom_tile", "geom_raster").
 #' @param tile_cluster Whether to sort by clusters the matrix.
+#' @param tile_na_rm Whether to remove NA values in matrix tiles.
+#' @param tile_linejoin Line join type for matrix tiles.
 #' @param matrix_diagonal_include Whether to include diagonal in matrix plots.
 #' @param matrix_upper_triangle_include Whether to include upper triangle in matrix plots.
 #' @param matrix_lower_triangle_include Whether to include lower triangle in matrix plots.
@@ -208,10 +215,13 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  label_text_angle = 0,
                                  label_text_size = 2,
                                  label_text_color = "black",
+                                 label_text_family = "sans",
                                  # --- POINT / OUTLINE AESTHETICS ---------------------------------------
                                  point_size = 4,
                                  outline_include = FALSE,
                                  outline_multiplier = 1.25,
+                                 outline_additional_size = 0,
+                                 outline_alpha = 1,
                                  outline_color = "black",
                                  # ---- Tooltip Aesthetics ----
                                  tooltip_include = TRUE,
@@ -223,6 +233,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  axis_text_angle_y = 0,
                                  axis_text_size = 8,
                                  axis_text_color = "black",
+                                 axis_text_family = "sans",
                                  # ---- Generation Scale Settings ----
                                  generation_height = 1,
                                  generation_width = 1,
@@ -306,6 +317,11 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  focal_fill_viridis_begin = 0,
                                  focal_fill_viridis_end = 1,
                                  focal_fill_viridis_direction = 1, # 1 for left to right, -1 for right to left
+                                 focal_fill_color_values = c( # okabe and ito
+                                   "#052f60", "#e69f00", "#56b4e9", "#009e73",
+                                   "#f0e442", "#0072b2", "#d55e00", "#cc79a7"
+                                 ),
+                                 focal_fill_labels = c("Low", "Mid", "High"),
                                  # Use first color for affected,
                                  # ---- Confidence Intervals
                                  ci_include = TRUE,
@@ -316,6 +332,8 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  tile_color_border = NA,
                                  tile_cluster = TRUE,
                                  tile_geom = "geom_tile",
+                                 tile_na_rm = FALSE,
+                                 tile_linejoin = "mitre",
                                  # ---- matrix settings ----
                                  matrix_diagonal_include = TRUE,
                                  matrix_upper_triangle_include = FALSE,
@@ -402,12 +420,15 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     label_text_angle = label_text_angle,
     label_text_size = label_text_size,
     label_text_color = label_text_color,
+    label_text_family = label_text_family,
 
     # --- POINT / OUTLINE AESTHETICS ---------------------------------------
     point_size = point_size,
     outline_include = outline_include,
     outline_multiplier = outline_multiplier,
     outline_color = outline_color,
+    outline_additional_size = outline_additional_size,
+    outline_alpha = outline_alpha,
 
     # ---- Tooltip Aesthetics ----
     tooltip_include = tooltip_include,
@@ -420,6 +441,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     axis_text_angle_y = axis_text_angle_y,
     axis_text_size = axis_text_size,
     axis_text_color = axis_text_color,
+    axis_text_family = axis_text_family,
 
     # ---- Generation Scale Settings ----
     generation_height = generation_height,
@@ -448,7 +470,6 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     segment_self_angle = segment_self_angle,
     segment_self_curvature = segment_self_curvature,
     segment_self_linewidth = segment_self_linewidth,
-
 
     # ---- Sex Legend and Appearance ----
     sex_color_include = sex_color_include,
@@ -512,9 +533,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     focal_fill_viridis_end = focal_fill_viridis_end,
     focal_fill_viridis_direction = focal_fill_viridis_direction,
 
-
     # ---- Confidence Intervals
-
     ci_include = ci_include,
     ci_ribbon_alpha = ci_ribbon_alpha,
 
@@ -524,13 +543,15 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     tile_cluster = tile_cluster,
     tile_interpolate = tile_interpolate,
     tile_geom = tile_geom,
+    tile_na_rm = tile_na_rm,
+    tile_linejoin = tile_linejoin,
+
     # ---- matrix settings ----
     matrix_sparse = matrix_sparse,
     matrix_isChild_method = matrix_isChild_method,
     matrix_diagonal_include = matrix_diagonal_include,
     matrix_upper_triangle_include = matrix_upper_triangle_include,
     matrix_lower_triangle_include = matrix_lower_triangle_include,
-
 
     # -- Output Options ----
     return_static = return_static,
@@ -545,11 +566,12 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
   if (lc_function_name %in% c("ggrelatednessmatrix")) {
     #   If the function is ggRelatednessMatrix, we need to adjust the tooltip columns
     core_list$tooltip_columns <- c("ID1", "ID2", "value")
-    core_list$tile_color_palette <- c(
-      core_list$color_palette_low,
-      core_list$color_palette_mid,
-      core_list$color_palette_high
-    )
+
+    #  core_list$tile_color_palette <- c(
+    #    core_list$color_palette_low,
+    #   core_list$color_palette_mid,
+    #   core_list$color_palette_high
+    # )
     core_list$color_scale_midpoint <- 0.25
     core_list$plot_title <- "Relatedness Matrix"
     core_list$axis_x_label <- "Individual"
@@ -642,6 +664,29 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
 buildPlotConfig <- function(default_config,
                             config,
                             function_name = "ggPedigree") {
+  # -- Detect duplicate configuration entries --
+  config_names <- names(config)
+  duplicated_keys <- config_names[duplicated(config_names)]
+
+  if (length(duplicated_keys) > 0) {
+    warning(sprintf(
+      "Duplicate config keys detected: %s. Later values will override earlier ones.",
+      paste(unique(duplicated_keys), collapse = ", ")
+    ))
+  }
+  # -- Detect unrecognized configuration entries --
+  valid_keys <- names(formals(getDefaultPlotConfig))
+  valid_keys <- setdiff(valid_keys, "function_name") # it's passed separately
+
+  unrecognized_keys <- setdiff(config_names, valid_keys)
+  if (length(unrecognized_keys) > 0) {
+    warning(sprintf(
+      "The following config values are not recognized by getDefaultPlotConfig(): %s",
+      paste(unrecognized_keys, collapse = ", ")
+    ))
+  }
+
+  # -- Merge user config with defaults --
   built_config <- utils::modifyList(default_config, config)
 
   if (stringr::str_to_lower(function_name) %in%

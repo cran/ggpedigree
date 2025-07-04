@@ -1,3 +1,20 @@
+# ggpedigree (dev version)
+
+# ggpedigree 0.8.0
+* Makes ggrepel a suggested package instead of a required one.
+* Make connections included in the plot by default.
+* Expose linejoin in ggRelatednessMatrix
+* Expose outline_additive and outline_alpha to ggpedigree
+* Refactored the ggpedigree function to improve readability and maintainability.
+* Transferring ASOIAF data from BGmisc to ggpedigree
+
+# ggpedigree 0.7.1
+* Fixed focal_fill ID being indexed to row order, rather than the ID order.
+* Fixed bug in using fam_x and fam_y in with generation_height
+* Add option to add phantom parents to the pedigree plot.
+* Alerts when duplicate or bad configs are used
+* Make palleter suggested instead of required
+
 # ggpedigree 0.7.0
 * Changed the default behavior of `ggPedigree` to use x_fam and y_fam for positioning families, rather than x_midparent and y_midparent. This change allows for better visualization of pedigrees with multiple families.
 * Changed the get midpoint of curvature to better approximate geom_curv behavior.
@@ -22,7 +39,7 @@
 * Added usage of color_palette to the `ggpedigree` function.
 * Added curvature option to the `ggpedigree` function.
 * Add support for custom affected labels for affected individuals in the `ggpedigree` function.
-* Add support for removing diagonal, upper triangle, and lower triangle in the `ggRelatednessMatrix` function. 
+* Add support for removing diagonal, upper triangle, and lower triangle in the `ggRelatednessMatrix` function.
 * Add support for labeling tiles
 * Added new tests for the `ggRelatednessMatrix` function.
 * Added new phenotype plotting function `ggPhenotypebyDegree` to visualize phenotypes by degree of relatedness.
