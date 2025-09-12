@@ -1,6 +1,29 @@
-# ggpedigree (dev version)
+# ggpedigree 0.9.0
+* smarter segment coloring
+* added setting to hide legend for sex
+* avoided sapply() in ggPedigreeInteractive
+* added subfunction for adding twins
+* add non-dot versions of internal functions for evaluating complexity
+* added alpha settings
+* added compatibility with pedigree objects from kinship2
+* exposed code_female, code_na to config
+* added tests for kinship2 compatibility
+* Updated JOSS paper
+* Refactored step 2+3 of the ggpedigree function to .transformPed()
+* Renamed p variable as plotObject in ggpedigree subfunctions
+* Smarter implementation of aliases
+* Updated hex to actually use ggpedigree
+* Exposed 'relations' and 'hints' inputs to ggpedigree
+* Added more intuitive defaults
+* refactor calcCoordinates with alignPedigreeWithHints and alignPedigreeWithRelations
+* Vectorized part of calcCoordinates
+* removed redundant plotPedigree  verbose section
+* add log2 option for relatedness
+* Improve plotly conversion
 
 # ggpedigree 0.8.0
+## cran release
+## joss paper submitted
 * Makes ggrepel a suggested package instead of a required one.
 * Make connections included in the plot by default.
 * Expose linejoin in ggRelatednessMatrix

@@ -60,7 +60,7 @@
 #' @importFrom BGmisc ped2fam ped2paternal ped2maternal recodeSex checkParentIDs
 #' @importFrom rlang sym
 #' @importFrom utils modifyList
-#'
+#' @aliases ggpedigree
 ggPedigree <- function(ped,
                        famID = "famID",
                        personID = "personID",
@@ -82,11 +82,21 @@ ggPedigree <- function(ped,
                        phantoms = FALSE,
                        ...) {
   if (!inherits(ped, "data.frame")) {
-    stop("ped should be a data.frame or inherit to a data.frame")
+    if (rlang::inherits_any(ped, c("ped", "kinship2.pedigree"))) {
+      # Convert ped object to data.frame
+      ped <- as.data.frame(ped)
+    } else if (rlang::inherits_any(ped, "pedigreeList")) {
+      class(ped) <- "list"
+      ped <- as.data.frame(ped)
+    } else {
+      # If not a data.frame or compatible type, throw an error
+      stop("ped should be a data.frame or inherit to a data.frame")
+    }
   }
 
 
-  if (interactive == TRUE && requireNamespace("plotly", quietly = TRUE)) {
+  if (interactive == TRUE &&
+    requireNamespace("plotly", quietly = TRUE)) {
     # Call the interactive function with the provided arguments
 
     ggPedigreeInteractive(
@@ -111,14 +121,12 @@ ggPedigree <- function(ped,
       ...
     )
   } else {
-    if (interactive == TRUE && !requireNamespace("plotly", quietly = TRUE)) {
+    if (interactive == TRUE &&
+      !requireNamespace("plotly", quietly = TRUE)) {
       message("The 'plotly' package is required for interactive plots.")
     }
     # Set default styling and layout parameters
-    default_config <- getDefaultPlotConfig(
-      function_name = "ggpedigree",
-      personID = personID
-    )
+    default_config <- getDefaultPlotConfig(function_name = "ggpedigree", personID = personID)
 
     # Merge with user-specified overrides
     # This allows the user to override any of the default values
@@ -150,6 +158,11 @@ ggPedigree <- function(ped,
   }
 }
 
+#' @rdname ggPedigree
+#' @export
+ggpedigree <- ggPedigree
+
+
 #' @title Core Function for ggPedigree
 #' @description
 #' This function is the core implementation of the ggPedigree function.
@@ -162,7 +175,8 @@ ggPedigree <- function(ped,
 #' @keywords internal
 
 
-ggPedigree.core <- function(ped, famID = "famID",
+ggPedigree.core <- function(ped,
+                            famID = "famID",
                             personID = "personID",
                             momID = "momID",
                             dadID = "dadID",
@@ -192,146 +206,58 @@ ggPedigree.core <- function(ped, famID = "famID",
     message("Debug mode is ON. Debugging information will be printed.")
   }
   # add matches for fill groups
-  fill_group_maternal <- c("maternal", "matID", "maternal line", "maternal lineages", "maternal lines")
-  fill_group_paternal <- c("paternal", "patID", "paternal line", "paternal lineages", "paternal lines")
-  fill_group_family <- c("famID", "family", "family lineages", "family lines", "family line")
-
-
-  # -----
-  # STEP 2: Pedigree Data Transformation
-  # -----
-
-  if (!all(c(famID, patID, matID) %in% names(ped)) && !famID %in% names(ped)) {
-    ds_ped <- BGmisc::ped2fam(ped,
-      famID = famID,
-      personID = personID,
-      momID = momID,
-      dadID = dadID
-    )
-  } else {
-    ds_ped <- ped
-  }
-
-  if (config$focal_fill_include == TRUE) {
-    if (!patID %in% names(ds_ped) && config$focal_fill_component %in% fill_group_paternal) {
-      ds_ped <- BGmisc::ped2paternal(ds_ped,
-        patID = patID,
-        personID = personID,
-        momID = momID,
-        dadID = dadID
-      )
-    }
-
-    if (!matID %in% names(ds_ped) && config$focal_fill_component %in% fill_group_maternal) {
-      ds_ped <- BGmisc::ped2maternal(ds_ped,
-        matID = matID,
-        personID = personID,
-        momID = momID,
-        dadID = dadID
-      )
-    }
-  }
-
-
-  # ----
-  # STEP 3: Data Cleaning and Recoding
-  # ----
-
-
-  # Recode affected status into factor, if applicable
-
-  if (!is.null(status_column)) {
-    ds_ped[[status_column]] <- factor(
-      ds_ped[[status_column]],
-      levels = config$status_codes,
-      labels = config$status_labels
-    )
-  }
-
-  # Standardize sex variable using code_male convention
-  ds_ped <- BGmisc::recodeSex(ds_ped,
-    recode_male = config$code_male
+  fill_group_maternal <- c(
+    "maternal",
+    "matID",
+    "maternal line",
+    "maternal lineages",
+    "maternal lines"
+  )
+  fill_group_paternal <- c(
+    "paternal",
+    "patID",
+    "paternal line",
+    "paternal lineages",
+    "paternal lines"
+  )
+  fill_group_family <- c(
+    "famID",
+    "family",
+    "family lineages",
+    "family lines",
+    "family line"
   )
 
-  if (phantoms == TRUE) {
-    # If phantoms are requested, add phantom parents
-    ds_ped <- BGmisc::checkParentIDs(ds_ped,
-      addphantoms = TRUE,
-      repair = TRUE,
-      parentswithoutrow = FALSE,
-      repairsex = FALSE,
-      personID = personID,
-      momID = momID,
-      dadID = dadID,
-      famID = famID
-    )
-  }
 
-  if (config$focal_fill_include == TRUE && is.null(focal_fill_column)) {
-    # If fill_column is specified but not in ds_ped, use personID as fill
-    if (config$focal_fill_component %in% c(
-      "additive",
-      "common nuclear",
-      "mitochondrial",
-      "mtdna", "mitochondria"
-    )) {
-      # If focal_fill_component is specified, create fill column based on component
-      # This will create a fill column based on the component specified in the config
-      # and the personID.
-      # The function createFillColumn will handle the logic of creating the fill column
-      # based on the component and personID.
-      ds_ped <- ds_ped |>
-        dplyr::left_join(
-          createFillColumn(
-            ped = ds_ped,
-            focal_fill_personID = config$focal_fill_personID,
-            personID = personID,
-            component = config$focal_fill_component,
-            config = config
-          ),
-          by = dplyr::join_by(
-            personID == !!rlang::sym(personID)
-          )
-        )
-    } else if (config$focal_fill_component %in% c(
-      fill_group_family, fill_group_maternal, fill_group_paternal,
-      matID, patID, famID
-    )
-    ) {
-      # If focal_fill_component is specified, create fill column based on component
-      # This will create a fill column based on the component specified in the config
-      if (config$focal_fill_component %in% fill_group_maternal) {
-        config$focal_fill_component_recode <- matID
-        # If focal_fill_component is maternal, use matID as fill
-        ds_ped <- ds_ped |>
-          dplyr::mutate(focal_fill = as.factor(.data[[matID]]))
-      }
-      if (config$focal_fill_component %in% fill_group_paternal) {
-        config$focal_fill_component_recode <- patID
+  # -----
+  # STEP 2+3: Pedigree Data Transformation and Data Cleaning and Recoding
+  # -----
 
-        # If focal_fill_component is paternal, use patID as fill
-        ds_ped <- ds_ped |>
-          dplyr::mutate(focal_fill = as.factor(.data[[patID]]))
-      }
-      if (config$focal_fill_component %in% fill_group_family) {
-        config$focal_fill_component_recode <- famID
+  ds_ped <- preparePedigreeData(
+    famID = famID,
+    patID = patID,
+    matID = matID,
+    ped = ped,
+    personID = personID,
+    momID = momID,
+    dadID = dadID,
+    config = config,
+    fill_group_paternal = fill_group_paternal,
+    fill_group_maternal = fill_group_maternal,
+    fill_group_family = fill_group_family,
+    status_column = status_column,
+    phantoms = phantoms,
+    focal_fill_column = focal_fill_column
+  )
 
-        # If focal_fill_component is famID, use famID as fill
-        ds_ped <- ds_ped |>
-          dplyr::mutate(focal_fill = as.factor(.data[[famID]]))
-      }
-    }
-  } else if (config$focal_fill_include == TRUE && !is.null(focal_fill_column)) {
-    # If fill_column is specified, use it directly
-    ds_ped <- ds_ped |>
-      dplyr::mutate(focal_fill = !!rlang::sym(focal_fill_column))
-  }
+
   # -----
   # STEP 4: Coordinate Generation
   # -----
 
   # Compute layout coordinates using pedigree structure
-  ds <- calculateCoordinates(ds_ped,
+  ds <- calculateCoordinates(
+    ds_ped,
     personID = personID,
     momID = momID,
     dadID = dadID,
@@ -346,10 +272,7 @@ ggPedigree.core <- function(ped, famID = "famID",
     # assign("DEBUG_ds", ds, envir = .GlobalEnv)
   }
   # Apply spacing factors
-  ds <- .adjustSpacing(
-    ds = ds,
-    config = config
-  )
+  ds <- .adjustSpacing(ds = ds, config = config)
 
 
   # -----
@@ -357,7 +280,8 @@ ggPedigree.core <- function(ped, famID = "famID",
   # -----
 
   # Generate a connection table for plotting lines (parents, spouses, etc.)
-  plot_connections <- calculateConnections(ds,
+  plot_connections <- calculateConnections(
+    ds,
     config = config,
     personID = personID,
     spouseID = spouseID,
@@ -369,7 +293,10 @@ ggPedigree.core <- function(ped, famID = "famID",
   connections <- plot_connections$connections
 
   if (config$debug == TRUE) {
-    message("Connections calculated. Number of connections: ", nrow(connections))
+    message(
+      "Connections calculated. Number of connections: ",
+      nrow(connections)
+    )
 
     # assign("DEBUG_connections", connections, envir = .GlobalEnv)
   }
@@ -393,10 +320,14 @@ ggPedigree.core <- function(ped, famID = "famID",
   config$gap_hoff <- 0.5 * config$generation_height # single constant for all “stub” offsets
   config$gap_woff <- 0.5 * config$generation_width # single constant for all “stub” offsets
 
-  p <- ggplot2::ggplot(ds, ggplot2::aes(
-    x = .data$x_pos,
-    y = .data$y_pos
-  ))
+
+  p <- ggplot2::ggplot(
+    ds,
+    ggplot2::aes(
+      x = .data$x_pos,
+      y = .data$y_pos
+    )
+  )
 
   # -----
   # STEP 7: Add Segments
@@ -454,8 +385,8 @@ ggPedigree.core <- function(ped, famID = "famID",
       color = config$segment_offspring_color,
       na.rm = TRUE
     )
-  # Sibling vertical drop line
-  # special handling for twin siblings
+
+  # if twins
   if (inherits(plot_connections$twin_coords, "data.frame")) {
     plot_connections$twin_coords <- plot_connections$twin_coords |>
       dplyr::mutate(
@@ -466,64 +397,20 @@ ggPedigree.core <- function(ped, famID = "famID",
       ) |>
       left_join(
         connections |>
-          dplyr::select(
-            !!rlang::sym(personID), "x_mid_sib", "y_mid_sib"
-          ), # the twin_coords file didn't have its variables restored
+          dplyr::select(!!rlang::sym(personID), "x_mid_sib", "y_mid_sib"),
+        # the twin_coords file didn't have its variables restored
         by = join_by(personID == !!rlang::sym(personID))
       )
-    p <- p + ggplot2::geom_segment(
-      data = plot_connections$twin_coords,
-      ggplot2::aes(
-        x = .data$x_mid_twin,
-        xend = .data$x_mid_sib,
-        y = .data$y_mid_twin - config$gap_hoff,
-        yend = .data$y_mid_sib - config$gap_hoff
-      ),
-      linewidth = config$segment_linewidth,
-      lineend = config$segment_lineend,
-      linejoin = config$segment_linejoin,
-      linetype = config$segment_linetype,
-      color = config$segment_offspring_color,
-      na.rm = TRUE
-    ) +
-      ggplot2::geom_segment(
-        data = plot_connections$twin_coords,
-        ggplot2::aes(
-          x = .data$x_pos,
-          xend = .data$x_mid_twin,
-          y = .data$y_pos,
-          yend = .data$y_mid_twin - config$gap_hoff
-        ),
-        linewidth = config$segment_linewidth,
-        lineend = config$segment_lineend,
-        linejoin = config$segment_linejoin,
-        linetype = config$segment_linetype,
-        color = config$segment_sibling_color,
-        na.rm = TRUE
-      )
 
-    if ("mz" %in% names(plot_connections$twin_coords) &&
-      any(plot_connections$twin_coords$mz == TRUE)) {
-      p <- p + # horizontal line to twin midpoint for MZ twins
-        ggplot2::geom_segment(
-          data = plot_connections$twin_coords |>
-            dplyr::filter(.data$mz == TRUE),
-          ggplot2::aes(
-            x = .data$x_start,
-            xend = .data$x_end,
-            y = .data$y_start,
-            yend = .data$y_end
-          ),
-          linewidth = config$segment_linewidth,
-          lineend = config$segment_lineend,
-          linejoin = config$segment_linejoin,
-          linetype = config$segment_mz_linetype,
-          color = config$segment_mz_color,
-          alpha = config$segment_mz_alpha,
-          na.rm = TRUE
-        )
-    }
+    p <- addTwins(
+      plotObject = p,
+      connections = connections,
+      config = config,
+      plot_connections = plot_connections,
+      personID = personID
+    )
   }
+
   p <- p +
     ggplot2::geom_segment(
       data = connections |>
@@ -548,23 +435,21 @@ ggPedigree.core <- function(ped, famID = "famID",
 
   # Add point layers for each individual in the pedigree.
   p <- .addNodes(
-    p = p,
+    plotObject = p,
     config = config,
     focal_fill_column = focal_fill_column,
     status_column = status_column
   )
 
   # Add overlay points for affected status if applicable
-  if (config$sex_color_include == TRUE ||
-    config$focal_fill_include == TRUE ||
-    config$overlay_include == TRUE ||
-    (!is.null(status_column) && config$status_include == TRUE)
-
-  ) {
+  if (
+    config$focal_fill_include == TRUE && config$sex_color_include == FALSE ||
+      config$overlay_include == TRUE && !is.null(overlay_column) ||
+      !is.null(status_column) && config$status_include == TRUE && config$sex_color_include == TRUE) {
     # If overlay_column is specified, use it for alpha aesthetic
 
     p <- .addOverlay(
-      p = p,
+      plotObject = p,
       config = config,
       focal_fill_column = focal_fill_column,
       status_column = status_column,
@@ -577,7 +462,7 @@ ggPedigree.core <- function(ped, famID = "famID",
   # Add labels to the points using ggrepel for better visibility
 
   if (config$label_include == TRUE) {
-    p <- .addLabels(p = p, config = config)
+    p <- .addLabels(plotObject = p, config = config)
   }
 
   # -----
@@ -587,7 +472,7 @@ ggPedigree.core <- function(ped, famID = "famID",
   # Self-segment (for duplicate layout appearances of same person)
   if (inherits(plot_connections$self_coords, "data.frame")) {
     p <- .addSelfSegment(
-      p = p,
+      plotObject = p,
       config = config,
       plot_connections = plot_connections
     )
@@ -622,7 +507,7 @@ ggPedigree.core <- function(ped, famID = "famID",
   # Adjust legend labels and colors based on the configuration
   if (config$apply_default_scales == TRUE) {
     p <- .addScales(
-      p = p,
+      plotObject = p,
       config = config,
       status_column = status_column,
       focal_fill_column = focal_fill_column
@@ -644,25 +529,22 @@ ggPedigree.core <- function(ped, famID = "famID",
   }
 }
 
-#' @rdname ggPedigree
-#' @export
-ggpedigree <- ggPedigree
+
+
 
 #' @title Add Nodes to ggplot Pedigree Plot
 #' @inheritParams ggPedigree
-#' @param p A ggplot object.
+#' @param plotObject A ggplot object.
 #' @keywords internal
 #'
-.addNodes <- function(p,
+.addNodes <- function(plotObject,
                       config,
                       focal_fill_column = NULL,
                       status_column = NULL) {
   if (config$outline_include == TRUE) {
-    p <- p +
+    plotObject <- plotObject +
       ggplot2::geom_point(
-        ggplot2::aes(
-          shape = as.factor(.data$sex)
-        ),
+        ggplot2::aes(shape = as.factor(.data$sex)),
         size = config$point_size * config$outline_multiplier + config$outline_additional_size,
         na.rm = TRUE,
         color = config$outline_color,
@@ -673,7 +555,7 @@ ggpedigree <- ggPedigree
 
   if (config$sex_color_include == TRUE) {
     # Use color and shape to represent sex
-    p <- p +
+    plotObject <- plotObject +
       ggplot2::geom_point(
         ggplot2::aes(
           color = as.factor(.data$sex),
@@ -686,7 +568,7 @@ ggpedigree <- ggPedigree
     # If status_column is not present but status_include is TRUE,
     # use alpha aesthetic to show affected status
     if (is.null(focal_fill_column)) {
-      p <- p +
+      plotObject <- plotObject +
         ggplot2::geom_point(
           ggplot2::aes(
             color = .data$focal_fill,
@@ -696,7 +578,7 @@ ggpedigree <- ggPedigree
           na.rm = TRUE
         )
     } else {
-      p <- p +
+      plotObject <- plotObject +
         ggplot2::geom_point(
           ggplot2::aes(
             color = !!rlang::sym(focal_fill_column),
@@ -706,10 +588,11 @@ ggpedigree <- ggPedigree
           na.rm = TRUE
         )
     }
-  } else if (config$status_include == TRUE && !is.null(status_column)) {
+  } else if (config$status_include == TRUE &&
+    !is.null(status_column)) {
     # If status_column is present but sex_color_include is FALSE,
     # use shape for sex and color for affected status
-    p <- p +
+    plotObject <- plotObject +
       ggplot2::geom_point(
         ggplot2::aes(
           color = as.factor(!!rlang::sym(status_column)),
@@ -721,83 +604,94 @@ ggpedigree <- ggPedigree
   } else {
     # If neither sex color nor status_column is active,
     # plot using shape (sex) only
-    p <- p +
-      ggplot2::geom_point(
-        ggplot2::aes(
-          shape = as.factor(.data$sex)
-        ),
+    plotObject <- plotObject +
+      ggplot2::geom_point(ggplot2::aes(shape = as.factor(.data$sex)),
         size = config$point_size,
         na.rm = TRUE
       )
   }
 
 
-  return(p)
+  return(plotObject)
 }
+
+#' @rdname dot-addNodes
+addNodes <- .addNodes
+
+
 
 #' @title Add Overlay to ggplot Pedigree Plot
 #' @inheritParams ggPedigree
-#' @param p A ggplot object.
+#' @param plotObject A ggplot object.
 #' @keywords internal
 #' @return A ggplot object with added overlay.
 #'
-.addOverlay <- function(p, config,
+.addOverlay <- function(plotObject,
+                        config,
                         focal_fill_column = NULL,
                         status_column = NULL,
                         overlay_column = NULL) {
-  #  print("Adding overlay to the plot...")
+  # print("Adding overlay to the plot...")
   if (config$overlay_include == TRUE && !is.null(overlay_column)) {
     # If overlay_column is specified, use it for alpha aesthetic
-    p <- p + ggplot2::geom_point(
+    plotObject <- plotObject + ggplot2::geom_point(
       ggplot2::aes(alpha = !!rlang::sym(overlay_column)),
+      # config$overlay_alpha_values), #
       shape = config$overlay_shape,
       size = config$point_size,
       color = config$overlay_color,
       na.rm = TRUE
     )
-  } else if (config$status_include == TRUE && !is.null(status_column)) {
+    # print("Overlay added using overlay_column.")
+  } else if (config$status_include == TRUE &&
+    !is.null(status_column) && config$sex_color_include == TRUE) {
     # If no overlay_column is specified, use status_column for alpha aesthetic
     #
-    p <- p + ggplot2::geom_point(
+    plotObject <- plotObject + ggplot2::geom_point(
       ggplot2::aes(alpha = !!rlang::sym(status_column)),
+      # config$status_alpha_values),
       shape = config$status_shape_affected,
       size = config$point_size,
       color = config$status_color_affected,
       na.rm = TRUE
     )
-  } else if (config$focal_fill_include == TRUE && !is.null(focal_fill_column)) {
+    # print("Overlay added using status_column.")
+  } else if (config$focal_fill_include == TRUE &&
+    !is.null(focal_fill_column) && config$sex_color_include == FALSE) {
     # If focal_fill_column is specified, use it for alpha aesthetic
-    p <- p + ggplot2::geom_point(
+    plotObject <- plotObject + ggplot2::geom_point(
       ggplot2::aes(alpha = !!rlang::sym(focal_fill_column)),
       shape = config$focal_fill_shape,
       size = config$point_size,
       color = config$focal_fill_mid_color,
       na.rm = TRUE
     )
+
+    # print("Overlay added using focal_fill_column.")
   }
 
-  return(p)
+  return(plotObject)
 }
+
+#' @rdname dot-addOverlay
+addOverlay <- .addOverlay
+
 
 #' @title Add Self Segments to ggplot Pedigree Plot
 #' @inheritParams ggPedigree
-#' @param p A ggplot object.
+#' @param plotObject A ggplot object.
 #' @keywords internal
 #' @return A ggplot object with added scales.
 
-.addSelfSegment <- function(p,
-                            config,
-                            plot_connections) {
+.addSelfSegment <- function(plotObject, config, plot_connections) {
   otherself <- plot_connections$self_coords |>
     dplyr::filter(!is.na(.data$x_otherself)) |>
-    dplyr::mutate(
-      otherself_xkey = makeSymmetricKey(.data$x_otherself, .data$x_pos)
-    ) |>
+    dplyr::mutate(otherself_xkey = .makeSymmetricKey(.data$x_otherself, .data$x_pos)) |>
     # unique combinations of x_otherself and x_pos and y_otherself and y_pos
     dplyr::distinct(.data$otherself_xkey, .keep_all = TRUE) |>
     unique()
   if (config$return_interactive == FALSE) {
-    p <- p + ggplot2::geom_curve(
+    plotObject <- plotObject + ggplot2::geom_curve(
       data = otherself,
       ggplot2::aes(
         x = .data$x_otherself,
@@ -862,7 +756,7 @@ ggpedigree <- ggPedigree
       dplyr::select(-"midpoint")
 
 
-    p <- p + ggplot2::geom_segment(
+    plotObject <- plotObject + ggplot2::geom_segment(
       data = otherself,
       ggplot2::aes(
         x = .data$x_otherself,
@@ -924,27 +818,32 @@ ggpedigree <- ggPedigree
       na.rm = TRUE
     )
   }
-  p
+  plotObject
 }
 
+#' @rdname dot-addSelfSegment
+addSelfSegment <- .addSelfSegment
 
 #' @title Add Scales to ggplot Pedigree Plot
 #' @inheritParams ggPedigree
-#' @param p A ggplot object.
+#' @param plotObject A ggplot object.
 #' @keywords internal
 #' @return A ggplot object with added scales.
 
-.addScales <- function(p, config,
+.addScales <- function(plotObject,
+                       config,
                        status_column = NULL,
                        focal_fill_column = NULL) {
-  p <- p + ggplot2::scale_shape_manual(
+  plotObject <- plotObject + ggplot2::scale_shape_manual(
     values = config$sex_shape_values,
     labels = config$sex_shape_labels
   )
 
   # Add alpha scale for affected status if applicable
-  if (!is.null(status_column) && config$sex_color_include == TRUE && config$status_include == TRUE) {
-    p <- p + ggplot2::scale_alpha_manual(
+  if (!is.null(status_column) &&
+    config$sex_color_include == TRUE &&
+    config$status_include == TRUE) {
+    plotObject <- plotObject + ggplot2::scale_alpha_manual(
       name = if (config$status_legend_show) {
         config$status_legend_title
       } else {
@@ -954,79 +853,104 @@ ggpedigree <- ggPedigree
       na.translate = FALSE
     )
     if (config$status_legend_show == FALSE) {
-      p <- p + ggplot2::guides(alpha = "none")
+      plotObject <- plotObject + ggplot2::guides(alpha = "none")
     }
   }
 
   # Add color scale for sex or affected status if applicable
-  if (config$sex_color_include == TRUE) {
+  if (config$sex_color_include == TRUE
+  ) {
     if (!is.null(config$sex_color_palette)) {
-      p <- p + ggplot2::scale_color_manual(
+      plotObject <- plotObject + ggplot2::scale_color_manual(
         values = config$sex_color_palette,
         labels = config$sex_shape_labels
       )
     } else {
-      p <- p +
+      plotObject <- plotObject +
         ggplot2::scale_color_discrete(labels = config$sex_shape_labels)
     }
 
-    p <- p +
+    plotObject <- plotObject +
       ggplot2::labs(
         color = config$sex_legend_title,
         shape = config$sex_legend_title
       )
+    if (config$sex_legend_show == FALSE) {
+      plotObject <- plotObject + ggplot2::guides(color = "none")
+    }
   } else if (config$focal_fill_include == TRUE) {
     if (config$focal_fill_method %in% c("steps", "steps2", "step", "step2")) {
-      p <- p + ggplot2::scale_colour_steps2(
+      plotObject <- plotObject + ggplot2::scale_colour_steps2(
         low = config$focal_fill_low_color,
         mid = config$focal_fill_mid_color,
         high = config$focal_fill_high_color,
         midpoint = config$focal_fill_scale_midpoint,
         n.breaks = config$focal_fill_n_breaks,
-        na.value = config$focal_fill_na_value
+        na.value = config$focal_fill_na_value,
+        transform = ifelse(config$focal_fill_use_log, "log2", "identity")
       )
     } else if (config$focal_fill_method %in% c("gradient2", "gradient")) {
-      p <- p + ggplot2::scale_colour_gradient2(
+      plotObject <- plotObject + ggplot2::scale_colour_gradient2(
         low = config$focal_fill_low_color,
         mid = config$focal_fill_mid_color,
         high = config$focal_fill_high_color,
         midpoint = config$focal_fill_scale_midpoint,
         n.breaks = config$focal_fill_n_breaks,
-        na.value = config$focal_fill_na_value
+        na.value = config$focal_fill_na_value,
+        transform = ifelse(config$focal_fill_use_log, "log2", "identity")
       )
     } else if (config$focal_fill_method %in% c("hue")) {
-      p <- p + ggplot2::scale_color_hue(
+      plotObject <- plotObject + ggplot2::scale_color_hue(
         h = config$focal_fill_hue_range,
         c = config$focal_fill_chroma,
         l = config$focal_fill_lightness,
         direction = config$focal_fill_hue_direction,
-        na.value = config$focal_fill_na_value,
+        na.value = config$focal_fill_na_value # ,
+        #  transform = ifelse(config$focal_fill_use_log,"log2","identity")
       )
     } else if (config$focal_fill_method %in% c("viridis_c")) {
-      p <- p + ggplot2::scale_colour_viridis_c(
+      plotObject <- plotObject + ggplot2::scale_colour_viridis_c(
         option = config$focal_fill_viridis_option,
         begin = config$focal_fill_viridis_begin,
         end = config$focal_fill_viridis_end,
         direction = config$focal_fill_viridis_direction,
-        na.value = config$focal_fill_na_value
+        na.value = config$focal_fill_na_value,
+        transform = ifelse(config$focal_fill_use_log, "log2", "identity")
       )
     } else if (config$focal_fill_method %in% c("viridis_d")) {
-      p <- p + ggplot2::scale_colour_viridis_d(
+      plotObject <- plotObject + ggplot2::scale_colour_viridis_d(
         option = config$focal_fill_viridis_option,
         begin = config$focal_fill_viridis_begin,
         end = config$focal_fill_viridis_end,
         direction = config$focal_fill_viridis_direction,
-        na.value = config$focal_fill_na_value
+        na.value = config$focal_fill_na_value # ,
+        #   transform = ifelse(config$focal_fill_use_log,"log2","identity")
+      )
+    } else if (config$focal_fill_method %in% c("viridis_b")) {
+      plotObject <- plotObject + ggplot2::scale_colour_viridis_b(
+        option = config$focal_fill_viridis_option,
+        begin = config$focal_fill_viridis_begin,
+        end = config$focal_fill_viridis_end,
+        direction = config$focal_fill_viridis_direction,
+        na.value = config$focal_fill_na_value,
+        transform = ifelse(config$focal_fill_use_log, "log2", "identity")
       )
     } else if (config$focal_fill_method %in% c("manual")) {
-      p <- p + ggplot2::scale_color_manual(
+      plotObject <- plotObject + ggplot2::scale_color_manual(
         values = config$focal_fill_color_values,
         labels = config$focal_fill_labels
       )
     } else {
-      stop("focal_fill_method must be one of 'steps', 'steps2', 'gradient2', or 'gradient'")
+      focal_fill_methods <- c(
+        "steps", "steps2", "step", "step2",
+        "viridis_c", "viridis_d", "viridis_b",
+        "manual",
+        "hue",
+        "gradient2", "gradient"
+      )
+      stop(paste("focal_fill_method must be one of", paste(focal_fill_methods, collapse = ", ")))
     }
-    p <- p +
+    plotObject <- plotObject +
       ggplot2::labs(
         color = if (config$focal_fill_legend_show == TRUE) {
           config$focal_fill_legend_title
@@ -1036,28 +960,32 @@ ggpedigree <- ggPedigree
         shape = config$sex_legend_title
       )
     if (config$focal_fill_legend_show == FALSE) {
-      p <- p + ggplot2::guides(color = "none")
+      plotObject <- plotObject + ggplot2::guides(color = "none")
     }
-  } else if (!is.null(status_column) && config$status_include == TRUE) {
+  } else if (!is.null(status_column) &&
+    config$status_include == TRUE) {
     if (!is.null(config$status_color_palette)) {
-      p <- p + ggplot2::scale_color_manual(
+      plotObject <- plotObject + ggplot2::scale_color_manual(
         values = config$status_color_values,
         labels = config$status_labels
       )
     } else {
-      p <- p +
+      plotObject <- plotObject +
         ggplot2::scale_color_discrete(labels = config$status_labels)
     }
-    p <- p +
+    plotObject <- plotObject +
       ggplot2::labs(
         color = config$status_legend_title,
         shape = config$sex_legend_title
       )
   } else {
-    p <- p + ggplot2::labs(shape = config$sex_legend_title)
+    plotObject <- plotObject + ggplot2::labs(shape = config$sex_legend_title)
   }
-  return(p)
+  return(plotObject)
 }
+
+#' @rdname dot-addScales
+addScales <- .addScales
 
 #' @title Add Labels to ggplot Pedigree Plot
 #' @inheritParams ggPedigree
@@ -1066,20 +994,23 @@ ggpedigree <- ggPedigree
 #' @return A ggplot object with added labels.
 #' @keywords internal
 #'
-.addLabels <- function(p, config) {
+.addLabels <- function(plotObject, config) {
   if (!requireNamespace("ggrepel", quietly = TRUE) &&
     config$label_method %in% c("geom_text_repel", "ggrepel", "geom_label_repel")) {
-    warning("The 'ggrepel' package is required for label methods 'geom_text_repel', 'ggrepel', and 'geom_label_repel'. Please install it using install.packages('ggrepel').")
+    warning(
+      "The 'ggrepel' package is required for label methods 'geom_text_repel', 'ggrepel', and 'geom_label_repel'. Please install it using install.packages('ggrepel')."
+    )
 
     config$label_method <- "geom_text" # fallback to geom_text if ggrepel is not available
   }
 
-  if (config$label_method %in% c("geom_text_repel", "ggrepel", "geom_label_repel") && requireNamespace("ggrepel", quietly = TRUE)
-  ) {
+  if (config$label_method %in% c("geom_text_repel", "ggrepel", "geom_label_repel") &&
+    requireNamespace("ggrepel", quietly = TRUE)) {
     # If ggrepel is available, use geom_text_repel or geom_label_repel
     # for better label placement and avoidance of overlaps
-    p <- p +
-      ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(config$label_column)),
+    plotObject <- plotObject +
+      ggrepel::geom_text_repel(
+        ggplot2::aes(label = !!rlang::sym(config$label_column)),
         nudge_y = config$label_nudge_y * config$generation_height,
         nudge_x = config$label_nudge_x * config$generation_width,
         size = config$label_text_size,
@@ -1092,8 +1023,9 @@ ggpedigree <- ggPedigree
         segment.color = config$label_segment_color
       )
   } else if (config$label_method == "geom_label") {
-    p <- p +
-      ggplot2::geom_label(ggplot2::aes(label = !!rlang::sym(config$label_column)),
+    plotObject <- plotObject +
+      ggplot2::geom_label(
+        ggplot2::aes(label = !!rlang::sym(config$label_column)),
         nudge_y = config$label_nudge_y * config$generation_height,
         nudge_x = config$label_nudge_x * config$generation_width,
         color = config$label_text_color,
@@ -1103,8 +1035,9 @@ ggpedigree <- ggPedigree
         na.rm = TRUE
       )
   } else if (config$label_method == "geom_text") {
-    p <- p +
-      ggplot2::geom_text(ggplot2::aes(label = !!rlang::sym(config$label_column)),
+    plotObject <- plotObject +
+      ggplot2::geom_text(
+        ggplot2::aes(label = !!rlang::sym(config$label_column)),
         nudge_y = config$label_nudge_y * config$generation_height,
         nudge_x = config$label_nudge_x * config$generation_width,
         color = config$label_text_color,
@@ -1114,32 +1047,129 @@ ggpedigree <- ggPedigree
         na.rm = TRUE
       )
   }
-  p
+  plotObject
 }
 
+#' @rdname dot-addLabels
+addLabels <- .addLabels
 
+#' @title Prepare Pedigree Data
+#' @description
+#' This function checks and prepares the pedigree data frame for use in ggPedigree.
+#'
+#' @inheritParams ggPedigree
+#' @inheritParams transformPed
+#' @param fill_group_family A character vector specifying the family fill group names.
+#' @keywords internal
+#' @return A data frame with the prepared pedigree data.
+#'
+#'
+preparePedigreeData <- function(ped,
+                                famID = "famID",
+                                personID = "personID",
+                                momID = "momID",
+                                dadID = "dadID",
+                                matID = "matID",
+                                patID = "patID",
+                                config = list(
+                                  focal_fill_include = TRUE,
+                                  focal_fill_component = "maternal"
+                                ),
+                                fill_group_paternal = c(
+                                  "paternal",
+                                  "patID",
+                                  "paternal line",
+                                  "paternal lineages",
+                                  "paternal lines"
+                                ),
+                                fill_group_maternal = c(
+                                  "maternal",
+                                  "matID",
+                                  "maternal line",
+                                  "maternal lineages",
+                                  "maternal lines"
+                                ),
+                                fill_group_family = c(
+                                  "family",
+                                  "famID",
+                                  "family line",
+                                  "family lineages",
+                                  "family lines"
+                                ),
+                                status_column = NULL,
+                                phantoms = FALSE,
+                                focal_fill_column = NULL) {
+  # -----
+  # STEP 2: Pedigree Data Transformation
+  # -----
 
-# @title Prepare Pedigree Data
-# @description
-# This function checks and prepares the pedigree data frame for use in ggPedigree.
-#
-#
-#
-# .preparePedigreeData <- function(ped, famID = "famID",
-#                                  personID = "personID",
-#                                  momID = "momID",
-#                                  dadID = "dadID",
-#                                  spouseID = "spouseID",
-#                                  status_column = NULL,
-#                                  focal_fill_column = NULL,
-#                                  config = list(),
-#                                  function_name = "ggPedigree") {
-#
-#   default_config <- getDefaultPlotConfig()
-#
-#   config <- utils::modifyList(default_config, config)
-#
-# }
+  # Transform the pedigree data frame to include family, paternal, and maternal IDs
+  ds_ped <- transformPed(
+    ped = ped,
+    famID = famID,
+    personID = personID,
+    momID = momID,
+    dadID = dadID,
+    matID = matID,
+    patID = patID,
+    config = config,
+    fill_group_paternal = fill_group_paternal,
+    fill_group_maternal = fill_group_maternal
+  )
+
+  # ----
+  # STEP 3: Data Cleaning and Recoding
+  # ----
+
+  # Recode affected status into factor, if applicable
+
+  if (!is.null(status_column)) {
+    ds_ped[[status_column]] <- factor(ds_ped[[status_column]],
+      levels = config$status_codes,
+      labels = config$status_labels
+    )
+  }
+
+  # Standardize sex variable using code_male convention
+
+  ds_ped <- BGmisc::recodeSex(ds_ped,
+    recode_male = config$code_male,
+    recode_na = config$code_na,
+    recode_female = config$code_female
+  )
+
+  if (phantoms == TRUE) {
+    # If phantoms are requested, add phantom parents
+    ds_ped <- BGmisc::checkParentIDs(
+      ds_ped,
+      addphantoms = TRUE,
+      repair = TRUE,
+      parentswithoutrow = FALSE,
+      repairsex = FALSE,
+      personID = personID,
+      momID = momID,
+      dadID = dadID,
+      famID = famID
+    )
+  }
+
+  # Add focal fill column if specified
+
+  ds_ped <- addFocalFillColumn(
+    ds_ped = ds_ped,
+    config = config,
+    focal_fill_column = focal_fill_column,
+    famID = famID,
+    matID = matID,
+    patID = patID,
+    personID = personID,
+    fill_group_family = fill_group_family,
+    fill_group_maternal = fill_group_maternal,
+    fill_group_paternal = fill_group_paternal
+  )
+  return(ds_ped)
+}
+
 
 #' @title Get fill column for ggPedigree
 #' @description
@@ -1170,13 +1200,19 @@ createFillColumn <- function(ped,
   )
 
   if (config$matrix_sparse == TRUE) {
-    warning("Sparse matrix detected. Converting to data frame. Currently, sparse matrices are not supported for ggPedigree processing.")
+    warning(
+      "Sparse matrix detected. Converting to data frame. Currently, sparse matrices are not supported for ggPedigree processing."
+    )
     com_mat <- as.matrix(com_mat)
   }
   # find the row index of  ped that matches focal_fill_personID
   row_index <- which(ped[[personID]] == focal_fill_personID)
   if (length(row_index) == 0) {
-    stop(paste("focal_fill_personID", focal_fill_personID, "not found in ped$personID."))
+    stop(paste(
+      "focal_fill_personID",
+      focal_fill_personID,
+      "not found in ped$personID."
+    ))
   }
   fill_df <- data.frame(
     focal_fill = round(com_mat[row_index, ], digits = config$value_rounding_digits),
@@ -1192,4 +1228,274 @@ createFillColumn <- function(ped,
     fill_df$focal_fill[fill_df$focal_fill == 0] <- NA_real_
   }
   fill_df
+}
+
+#' @title Process Pedigree Data
+#' @description
+#' This function processes the pedigree data frame to ensure it is in the correct format for ggPedigree.
+#' It checks for the presence of family, paternal, and maternal IDs, and fills in missing components based on the configuration.
+#' @inheritParams ggPedigree
+#' @param fill_group_paternal A character vector specifying which paternal components to fill.
+#' @param fill_group_maternal A character vector specifying which maternal components to fill.
+#' @return A data frame with the processed pedigree data.
+#' @keywords internal
+
+
+transformPed <- function(ped,
+                         famID = "famID",
+                         personID = "personID",
+                         momID = "momID",
+                         dadID = "dadID",
+                         matID = "matID",
+                         patID = "patID",
+                         config = list(
+                           focal_fill_include = TRUE,
+                           focal_fill_component = "maternal"
+                         ),
+                         fill_group_paternal = c(
+                           "paternal",
+                           "patID",
+                           "paternal line",
+                           "paternal lineages",
+                           "paternal lines"
+                         ),
+                         fill_group_maternal = c(
+                           "maternal",
+                           "matID",
+                           "maternal line",
+                           "maternal lineages",
+                           "maternal lines"
+                         )) {
+  if (!all(c(famID, patID, matID) %in% names(ped)) &&
+    !famID %in% names(ped)) {
+    ds_ped <- BGmisc::ped2fam(
+      ped,
+      famID = famID,
+      personID = personID,
+      momID = momID,
+      dadID = dadID
+    )
+  } else {
+    ds_ped <- ped
+  }
+
+  if (config$focal_fill_include == TRUE) {
+    if (!patID %in% names(ds_ped) &&
+      config$focal_fill_component %in% fill_group_paternal) {
+      ds_ped <- BGmisc::ped2paternal(
+        ds_ped,
+        patID = patID,
+        personID = personID,
+        momID = momID,
+        dadID = dadID
+      )
+    }
+
+    if (!matID %in% names(ds_ped) &&
+      config$focal_fill_component %in% fill_group_maternal) {
+      ds_ped <- BGmisc::ped2maternal(
+        ds_ped,
+        matID = matID,
+        personID = personID,
+        momID = momID,
+        dadID = dadID
+      )
+    }
+  }
+  return(ds_ped)
+}
+
+
+#' @title Add Focal Fill Column to Pedigree Data
+#' @description
+#' Adds a `focal_fill` column to the pedigree data based on configuration input.
+#' Supports additive, mitochondrial, and line-based modes. If `focal_fill_column`
+#' is specified, it takes priority over inferred modes.
+#'
+#' @inheritParams ggPedigree
+#' @param ds_ped A data frame already processed by `transformPed()`.
+#' @param fill_group_family Character vector specifying fill types for family lineage.
+#' @param fill_group_maternal Character vector specifying fill types for maternal lineage.
+#' @param fill_group_paternal Character vector specifying fill types for paternal lineage.
+#' @return A data frame with a `focal_fill` column added if applicable.
+#' @keywords internal
+addFocalFillColumn <- function(ds_ped,
+                               config,
+                               focal_fill_column = NULL,
+                               famID = "famID",
+                               matID = "matID",
+                               patID = "patID",
+                               personID = "personID",
+                               fill_group_family = c(
+                                 "famID",
+                                 "family",
+                                 "family lineages",
+                                 "family lines",
+                                 "family line"
+                               ),
+                               fill_group_maternal = c(
+                                 "maternal",
+                                 "matID",
+                                 "maternal line",
+                                 "maternal lineages",
+                                 "maternal lines"
+                               ),
+                               fill_group_paternal = c(
+                                 "paternal",
+                                 "patID",
+                                 "paternal line",
+                                 "paternal lineages",
+                                 "paternal lines"
+                               )) {
+  # -----
+  # STEP 1: Compute inferred fill column from component if no user-specified fill
+  # -----
+  if (config$focal_fill_include == TRUE &&
+    is.null(focal_fill_column)) {
+    # -----
+    # CASE 1: Component-based fill (e.g., additive, mtDNA)
+    # -----
+    if (config$focal_fill_component %in% c(
+      "additive",
+      "common nuclear",
+      "mitochondrial",
+      "mtdna",
+      "mitochondria"
+    )) {
+      # Use component matrix to generate fill values relative to focal individual
+      # The function createFillColumn will handle the logic of creating the fill column
+      ds_ped <- ds_ped |>
+        dplyr::left_join(
+          createFillColumn(
+            ped = ds_ped,
+            focal_fill_personID = config$focal_fill_personID,
+            personID = personID,
+            component = config$focal_fill_component,
+            config = config
+          ),
+          by = dplyr::join_by(personID == !!rlang::sym(personID))
+        )
+
+      # -----
+      # CASE 2: Lineage-based fill (family, maternal, paternal)
+      # -----
+    } else if (config$focal_fill_component %in% c(
+      fill_group_family,
+      fill_group_maternal,
+      fill_group_paternal,
+      matID,
+      patID,
+      famID
+    )) {
+      # Maternal fill → use matID
+      if (config$focal_fill_component %in% fill_group_maternal) {
+        config$focal_fill_component_recode <- matID
+        ds_ped <- ds_ped |>
+          dplyr::mutate(focal_fill = as.factor(.data[[matID]]))
+      }
+
+      # Paternal fill → use patID
+      if (config$focal_fill_component %in% fill_group_paternal) {
+        config$focal_fill_component_recode <- patID
+        ds_ped <- ds_ped |>
+          dplyr::mutate(focal_fill = as.factor(.data[[patID]]))
+      }
+
+      # Family fill → use famID
+      if (config$focal_fill_component %in% fill_group_family) {
+        config$focal_fill_component_recode <- famID
+        ds_ped <- ds_ped |>
+          dplyr::mutate(focal_fill = as.factor(.data[[famID]]))
+      }
+    }
+
+    # -----
+    # STEP 2: Use explicitly supplied fill column
+    # -----
+  } else if (config$focal_fill_include == TRUE &&
+    !is.null(focal_fill_column)) {
+    # Use column directly from pedigree data
+    ds_ped <- ds_ped |>
+      dplyr::mutate(focal_fill = !!rlang::sym(focal_fill_column))
+  }
+
+  # -----
+  # STEP 3: Return modified data frame with focal_fill (if applicable)
+  # -----
+  return(ds_ped)
+}
+#' @title Add Twins to ggplot Pedigree Plot
+#' @description
+#' Adds twin connections to the ggplot pedigree plot.
+#' This function modifies the `plotObject` by adding segments
+#' to represent twin relationships.
+#' @inheritParams ggPedigree
+#' @param plotObject A ggplot object to which twin segments will be added.
+#' @param connections A data frame containing twin connection coordinates.
+#' @param plot_connections A data frame containing the coordinates for twin segments.
+#' @keywords internal
+#' @return A ggplot object with twin segments added.
+
+addTwins <- function(plotObject,
+                     connections,
+                     config,
+                     plot_connections,
+                     personID = "personID") {
+  # Sibling vertical drop line
+  # special handling for twin sibling
+
+  plotObject <- plotObject + ggplot2::geom_segment(
+    data = plot_connections$twin_coords,
+    ggplot2::aes(
+      x = .data$x_mid_twin,
+      xend = .data$x_mid_sib,
+      y = .data$y_mid_twin - config$gap_hoff,
+      yend = .data$y_mid_sib - config$gap_hoff
+    ),
+    linewidth = config$segment_linewidth,
+    lineend = config$segment_lineend,
+    linejoin = config$segment_linejoin,
+    linetype = config$segment_linetype,
+    color = config$segment_offspring_color,
+    na.rm = TRUE
+  ) +
+    ggplot2::geom_segment(
+      data = plot_connections$twin_coords,
+      ggplot2::aes(
+        x = .data$x_pos,
+        xend = .data$x_mid_twin,
+        y = .data$y_pos,
+        yend = .data$y_mid_twin - config$gap_hoff
+      ),
+      linewidth = config$segment_linewidth,
+      lineend = config$segment_lineend,
+      linejoin = config$segment_linejoin,
+      linetype = config$segment_linetype,
+      color = config$segment_sibling_color,
+      na.rm = TRUE
+    )
+
+  if ("mz" %in% names(plot_connections$twin_coords) &&
+    any(plot_connections$twin_coords$mz == TRUE)) {
+    plotObject <- plotObject + # horizontal line to twin midpoint for MZ twins
+      ggplot2::geom_segment(
+        data = plot_connections$twin_coords |>
+          dplyr::filter(.data$mz == TRUE),
+        ggplot2::aes(
+          x = .data$x_start,
+          xend = .data$x_end,
+          y = .data$y_start,
+          yend = .data$y_end
+        ),
+        linewidth = config$segment_linewidth,
+        lineend = config$segment_lineend,
+        linejoin = config$segment_linejoin,
+        linetype = config$segment_mz_linetype,
+        color = config$segment_mz_color,
+        alpha = config$segment_mz_alpha,
+        na.rm = TRUE
+      )
+  }
+
+  return(plotObject)
 }

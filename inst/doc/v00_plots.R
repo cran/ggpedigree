@@ -47,9 +47,10 @@ ggPedigree(
   config = list(
     code_male = 1, # Here, 1 = male, 0 = female
     sex_color_include = FALSE,
-    point_size = 5,
-    outline_multiplier = 1.15,
-    line_width = 2.5,
+    segment_linewidth = .5,
+    point_size = 3,
+    outline_multiplier = 1.5,
+    # outline_additional_size = -1,
     sex_shape_female = "💸",
     sex_shape_male = "🖤",
     segment_spouse_color = viridis_pal()(5)[1],
@@ -58,8 +59,8 @@ ggPedigree(
     segment_offspring_color = viridis_pal()(5)[4],
     segment_mz_color = viridis_pal()(5)[5],
     #   segment_linetype = 3,
-    outline_include = TRUE,
-    outline_color = "grey" # viridis_pal()(5)[5]
+    outline_include = FALSE,
+    outline_color = "grey"
   )
 )
 
@@ -76,12 +77,12 @@ ggPedigree(
   famID = "famID",
   personID = "personID",
   config = list(
-    label_col = "name",
+    label_column = "first_name",
     sex_color_palette = c("pink", "blue"),
-    label_text_angle = -45,
-    label_nudge_y = -.25,
+    label_text_angle = -35,
+    label_nudge_y = .215,
     label_nudge_x = 0.45,
-    label_method = "geom_text",
+    label_method = "geom_text", # "ggrepel", #
     #   sex_color_palette = c("black", "black"),
     sex_color_include = TRUE
   )
@@ -112,14 +113,20 @@ ggPedigree(
   famID = "famID",
   personID = "ID",
   status_column = "affected",
+  overlay_column = NULL,
   config = list(
     code_male = 0,
-    sex_color_include = FALSE,
+    sex_color_include = TRUE,
+    status_include = TRUE,
+    overlay_include = FALSE,
     status_code_affected = TRUE,
     status_code_unaffected = FALSE,
     status_label_affected = "Infected",
     status_label_unaffected = "Not infected",
-    status_legend_title = "Status"
+    status_legend_title = "Status",
+    focal_fill_include = FALSE,
+    status_shape_affected = 4, # "🦠"  # virus shape
+    status_legend_show = TRUE
   )
 )
 

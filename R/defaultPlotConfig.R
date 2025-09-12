@@ -22,7 +22,9 @@
 #' @param plot_title Main title of the plot.
 #' @param plot_subtitle Subtitle of the plot.
 #' @param value_rounding_digits Number of digits to round displayed values.
-#' @param code_male Integer code for males in data.
+#' @param code_male Integer/string code for males in data.
+#' @param code_na optional Integer/string code for missing values in data.
+#' @param code_female  optional Integer/string code for females in data.
 #' @param filter_n_pairs Threshold to filter maximum number of pairs.
 #' @param filter_degree_min Minimum degree value used in filtering.
 #' @param filter_degree_max Maximum degree value used in filtering.
@@ -43,6 +45,7 @@
 #' @param label_max_overlaps Maximum number of overlapping labels.
 #' @param label_nudge_x Horizontal nudge for label text.
 #' @param label_nudge_y Vertical nudge for label text.
+#' @param label_nudge_y_flip TRUE. Whether to flip the nudge y value to be negative. The plot is reversed vertically, so this is needed to nudge labels up instead of down.
 #' @param label_segment_color Segment color for label connectors.
 #' @param label_text_angle Text angle for labels.
 #' @param label_text_size Font size for labels.
@@ -93,6 +96,8 @@
 #' @param sex_shape_female Shape for female nodes.
 #' @param sex_shape_male Shape for male nodes.
 #' @param sex_shape_unknown Shape for unknown sex nodes.
+#' @param sex_shape_include Whether to display the shape for sex variables
+#' @param sex_legend_show Whether to display sex in the legend
 #' @param status_include Whether to display affected status.
 #' @param status_code_affected Value that encodes affected status.
 #' @param status_code_unaffected Value that encodes unaffected status.
@@ -125,11 +130,12 @@
 #' @param focal_fill_mid_color Midpoint color for focal gradient.
 #' @param focal_fill_low_color Low-end color for focal gradient.
 #' @param focal_fill_scale_midpoint Midpoint for focal fill scale.
-#' @param focal_fill_method Method used for focal fill gradient.
+#' @param focal_fill_method Method used for focal fill gradient. Options are 'steps', 'steps2', 'step', 'step2', 'viridis_c', 'viridis_d', 'viridis_b', 'manual', 'hue', 'gradient2', 'gradient'.
 #' @param focal_fill_component Component type for focal fill.
 #' @param focal_fill_shape Shape used for focal fill points.
 #' @param focal_fill_n_breaks Number of breaks in focal fill scale.
 #' @param focal_fill_na_value Color for NA values in focal fill.
+#' @param focal_fill_use_log Whether to use log scale for focal fill.
 #' @param focal_fill_force_zero Whether to force zero to NA in focal fill.
 #' @param focal_fill_hue_range Hue range for focal fill colors.
 #' @param focal_fill_color_values A character vector of colors for focal fill.
@@ -159,7 +165,10 @@
 #' @param return_widget Whether to return a widget object.
 #' @param return_interactive Whether to return an interactive plot.
 #' @param return_midparent Whether to return midparent values in the plot.
+#' @param optimize_plotly Whether to optimize the plotly output for speed.
 #' @param override_many2many Whether to override many-to-many link logic.
+#' @param hints Optional hints to pass along to kinship2::autohint
+#' @param relation Optional relation to pass along to kinship2::pedigree
 #' @param debug Whether to enable debugging mode.
 #' @param ... Additional arguments for future extensibility.
 #' @return A named list of default plotting and layout parameters.
@@ -187,33 +196,24 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  value_rounding_digits = 5,
                                  # --- SEX ------------------------------------------------------------
                                  code_male = 1,
-                                 # ---- Filtering and Computation ----
-                                 filter_n_pairs = 500,
-                                 filter_degree_min = 0,
-                                 filter_degree_max = 7,
-                                 drop_classic_kin = FALSE,
-                                 drop_non_classic_sibs = TRUE,
-                                 use_only_classic_kin = TRUE,
-                                 use_relative_degree = TRUE,
-                                 group_by_kin = TRUE,
-                                 # ----Kinbin Settings ----
-                                 match_threshold_percent = 10,
-                                 max_degree_levels = 12,
-                                 grouping_column = "mtdna_factor",
-                                 # ---- Annotation Settings ----
-                                 annotate_include = TRUE,
-                                 annotate_x_shift = -0.1,
-                                 annotate_y_shift = 0.005,
+                                 code_na = NA,
+                                 code_female = 0,
+                                 #  code_unknown = NULL,
+                                 #    recode_male = code_male,#"M",
+                                 #    recode_female = code_female,# "F",
+                                 #    recode_na = code_na, # NA_character,
+                                 # recode_unknown = "U",
                                  # ---- Label Aesthetics ----
                                  label_include = TRUE,
                                  label_column = "personID",
-                                 label_method = "ggrepel",
-                                 label_max_overlaps = 15,
+                                 label_method = "geom_text", # "ggrepel",
+                                 label_max_overlaps = 25,
                                  label_nudge_x = 0,
-                                 label_nudge_y = -0.10,
+                                 label_nudge_y = 0.15,
+                                 label_nudge_y_flip = TRUE, # flip the nudge y value to be negative
                                  label_segment_color = NA,
                                  label_text_angle = 0,
-                                 label_text_size = 2,
+                                 label_text_size = 3,
                                  label_text_color = "black",
                                  label_text_family = "sans",
                                  # --- POINT / OUTLINE AESTHETICS ---------------------------------------
@@ -231,7 +231,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  axis_y_label = NULL,
                                  axis_text_angle_x = 90,
                                  axis_text_angle_y = 0,
-                                 axis_text_size = 8,
+                                 axis_text_size = 9,
                                  axis_text_color = "black",
                                  axis_text_family = "sans",
                                  # ---- Generation Scale Settings ----
@@ -241,7 +241,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  ped_align = TRUE,
                                  ped_width = 15,
                                  # ---- Segment Drawing Options ----
-                                 segment_linewidth = 0.5,
+                                 segment_linewidth = .5,
                                  segment_linetype = 1,
                                  segment_lineend = "round",
                                  segment_linejoin = "round",
@@ -251,11 +251,11 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  segment_sibling_color = segment_default_color,
                                  segment_spouse_color = segment_default_color,
                                  segment_mz_color = segment_default_color,
-                                 segment_mz_linetype = 1,
+                                 segment_mz_linetype = segment_linetype,
                                  segment_mz_alpha = 1,
                                  segment_mz_t = .6,
                                  segment_self_linetype = "dotdash",
-                                 segment_self_linewidth = .25,
+                                 segment_self_linewidth = .5 * segment_linewidth,
                                  segment_self_alpha = 0.5,
                                  segment_self_angle = 90,
                                  segment_self_curvature = -0.2,
@@ -267,6 +267,8 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  sex_shape_female = 16,
                                  sex_shape_male = 15,
                                  sex_shape_unknown = 18,
+                                 sex_shape_include = TRUE,
+                                 sex_legend_show = TRUE,
                                  # ---- Affected Status Controls ----
                                  status_include = TRUE,
                                  status_code_affected = 1,
@@ -309,6 +311,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  focal_fill_na_value = "black",
                                  focal_fill_shape = 21, # shape for focal fill points
                                  focal_fill_force_zero = FALSE, # work around that sets zero to NA so you can distinguish from low values
+                                 focal_fill_use_log = FALSE,
                                  focal_fill_hue_range = c(0, 360),
                                  focal_fill_chroma = 50,
                                  focal_fill_lightness = 50,
@@ -323,7 +326,25 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  ),
                                  focal_fill_labels = c("Low", "Mid", "High"),
                                  # Use first color for affected,
-                                 # ---- Confidence Intervals
+                                 # ---- correlation by bin ----
+                                 ## ---- Filtering and Computation ----
+                                 filter_n_pairs = 500,
+                                 filter_degree_min = 0,
+                                 filter_degree_max = 7,
+                                 drop_classic_kin = FALSE,
+                                 drop_non_classic_sibs = TRUE,
+                                 use_only_classic_kin = TRUE,
+                                 use_relative_degree = TRUE,
+                                 group_by_kin = TRUE,
+                                 ## ----Kinbin Settings ----
+                                 match_threshold_percent = 10,
+                                 max_degree_levels = 12,
+                                 grouping_column = "mtdna_factor",
+                                 ## ---- Annotation Settings ----
+                                 annotate_include = TRUE,
+                                 annotate_x_shift = -0.1,
+                                 annotate_y_shift = 0.005,
+                                 ## ---- Confidence Intervals
                                  ci_include = TRUE,
                                  ci_ribbon_alpha = .3,
                                  # ---- tile settings ----
@@ -345,9 +366,14 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
                                  return_widget = FALSE,
                                  return_interactive = FALSE,
                                  return_midparent = FALSE,
+                                 # ---- Kinship2 Options ----
+                                 hints = NULL,
+                                 relation = NULL,
                                  # ---- Debugging Options ----
                                  debug = FALSE,
                                  override_many2many = FALSE,
+                                 optimize_plotly = TRUE,
+                                 # ---- Future Extensibility ----
                                  ...) {
   # Ensure the color palette is a character vector
   if (!is.character(color_palette_default) ||
@@ -375,6 +401,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
   core_list <- list(
     # ---- General Appearance ----
     apply_default_scales = apply_default_scales,
+    segment_default_color = segment_default_color,
     apply_default_theme = apply_default_theme,
     color_palette_default = color_palette_default,
     color_palette_low = color_palette_low,
@@ -388,7 +415,13 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     value_rounding_digits = value_rounding_digits,
     # --- SEX ------------------------------------------------------------
     code_male = code_male,
-
+    code_na = code_na,
+    code_female = code_female,
+    #  code_unknown = code_unknown,
+    # recode_male = recode_male,
+    #   recode_na =  recode_na,
+    #  recode_female =  recode_female,
+    # recode_unknown =  recode_unknown,
     # ---- Filtering and Computation ----
     filter_n_pairs = filter_n_pairs,
     filter_degree_min = filter_degree_min,
@@ -416,6 +449,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     label_max_overlaps = label_max_overlaps,
     label_nudge_x = label_nudge_x,
     label_nudge_y = label_nudge_y,
+    label_nudge_y_flip = label_nudge_y_flip,
     label_segment_color = label_segment_color,
     label_text_angle = label_text_angle,
     label_text_size = label_text_size,
@@ -446,9 +480,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     # ---- Generation Scale Settings ----
     generation_height = generation_height,
     generation_width = generation_width,
-    ped_packed = ped_packed,
-    ped_align = ped_align,
-    ped_width = ped_width,
+
 
     # ---- Segment Drawing Options ----
 
@@ -456,12 +488,12 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     segment_linetype = segment_linetype,
     segment_lineend = segment_lineend,
     segment_linejoin = segment_linejoin,
-    segment_offspring_color = segment_offspring_color,
-    segment_parent_color = segment_parent_color,
-    segment_self_color = segment_self_color,
-    segment_sibling_color = segment_sibling_color,
-    segment_spouse_color = segment_spouse_color,
-    segment_mz_color = segment_mz_color,
+    segment_offspring_color = ifelse(segment_default_color == "black", segment_offspring_color, segment_default_color),
+    segment_parent_color = ifelse(segment_default_color == "black", segment_parent_color, segment_default_color),
+    segment_self_color = ifelse(segment_default_color == "black", segment_self_color, segment_default_color),
+    segment_sibling_color = ifelse(segment_default_color == "black", segment_sibling_color, segment_default_color),
+    segment_spouse_color = ifelse(segment_default_color == "black", segment_spouse_color, segment_default_color),
+    segment_mz_color = ifelse(segment_default_color == "black", segment_mz_color, segment_default_color),
     segment_mz_linetype = segment_mz_linetype,
     segment_mz_alpha = segment_mz_alpha,
     segment_mz_t = segment_mz_t,
@@ -479,7 +511,8 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     sex_shape_female = sex_shape_female,
     sex_shape_male = sex_shape_male,
     sex_shape_unknown = sex_shape_unknown,
-
+    sex_legend_show = sex_legend_show,
+    sex_shape_include = sex_shape_include,
     # ---- Affected Status Controls ----
     status_include = status_include,
     status_code_affected = status_code_affected,
@@ -523,6 +556,7 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     focal_fill_n_breaks = focal_fill_n_breaks,
     focal_fill_shape = focal_fill_shape, # shape for focal fill points
     focal_fill_na_value = focal_fill_na_value,
+    focal_fill_use_log = focal_fill_use_log, # use log scale for focal fill
     focal_fill_force_zero = focal_fill_force_zero, # work around that sets zero to NA so you can distinguish from low values
     focal_fill_hue_range = focal_fill_hue_range, # hue range for focal fill
     focal_fill_chroma = focal_fill_chroma, # chroma for focal fill
@@ -558,20 +592,28 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     return_widget = return_widget,
     return_interactive = return_interactive,
     return_midparent = return_midparent,
+    # ---- Kinship2 Options ----
+    ped_packed = ped_packed,
+    ped_align = ped_align,
+    ped_width = ped_width,
+    hints = hints,
+    relation = relation,
     # ---- Debugging Options ----
     override_many2many = override_many2many,
+    optimize_plotly = optimize_plotly,
     debug = debug
   )
   lc_function_name <- stringr::str_to_lower(function_name)
   if (lc_function_name %in% c("ggrelatednessmatrix")) {
     #   If the function is ggRelatednessMatrix, we need to adjust the tooltip columns
     core_list$tooltip_columns <- c("ID1", "ID2", "value")
-
+    core_list$label_nudge_y_flip <- FALSE
     #  core_list$tile_color_palette <- c(
     #    core_list$color_palette_low,
     #   core_list$color_palette_mid,
     #   core_list$color_palette_high
     # )
+
     core_list$color_scale_midpoint <- 0.25
     core_list$plot_title <- "Relatedness Matrix"
     core_list$axis_x_label <- "Individual"
@@ -587,7 +629,9 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     core_list$return_static <- FALSE
     core_list$return_widget <- FALSE
     core_list$return_interactive <- FALSE
-
+    core_list$label_nudge_y_flip <- FALSE
+    core_list$axis_y_label <- "Phenotypic Correlation"
+    core_list$axis_x_label <- "Coefficient of Genetic Variation"
     #  default_config <- list(
     #    apply_default_scales = TRUE,
     #    apply_default_theme = TRUE,
@@ -623,15 +667,16 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     "ggpedigree",
     "ggpedigreeinteractive"
   )) {
-    core_list$label_method <- "ggrepel"
+    core_list$label_method <- "geom_text" # "ggrepel"
     core_list$label_column <- personID
-
+    core_list$label_nudge_y_flip <- TRUE
+    core_list$value_rounding_digits <- 3
     # core_list$focal_fill_low_color <- core_list$color_palette_low
     # core_list$focal_fill_mid_color <- core_list$color_palette_mid
     # core_list$focal_fill_high_color <- core_list$color_palette_high
   }
   if (lc_function_name %in% c("ggpedigree")) {
-    core_list$label_method <- "ggrepel"
+    # core_list$label_method <- "ggrepel"
     core_list$return_static <- FALSE
     core_list$return_widget <- FALSE
     core_list$return_interactive <- FALSE
@@ -640,6 +685,8 @@ getDefaultPlotConfig <- function(function_name = "getDefaultPlotConfig",
     core_list$tooltip_columns <- c(personID, "sex", status_column)
     core_list$label_method <- "geom_text"
     core_list$label_include <- FALSE # default to FALSE
+    core_list$segment_linewidth <- 0.5 # too think
+    core_list$segment_self_linewidth <- .5 * core_list$segment_linewidth
     core_list$tooltip_include <- TRUE
     core_list$return_static <- FALSE
     core_list$return_widget <- TRUE
@@ -689,6 +736,10 @@ buildPlotConfig <- function(default_config,
   # -- Merge user config with defaults --
   built_config <- utils::modifyList(default_config, config)
 
+  built_config$label_nudge_y <- ifelse(built_config$label_nudge_y_flip,
+    built_config$label_nudge_y * -1, built_config$label_nudge_y
+  )
+
   if (stringr::str_to_lower(function_name) %in%
     c("ggpedigree", "ggpedigreeinteractive")) {
     # Set additional internal config values based on other entries
@@ -699,6 +750,8 @@ buildPlotConfig <- function(default_config,
         built_config$sex_shape_unknown
       )
     }
+
+
     if ("status_labs" %in% names(built_config) == FALSE) {
       built_config$status_labs <- c(
         built_config$status_label_affected,
@@ -734,10 +787,28 @@ buildPlotConfig <- function(default_config,
       ),
       built_config$status_labs
     )
+    if ("overlay_labs" %in% names(built_config) == FALSE) {
+      built_config$overlay_labs <- c(
+        built_config$overlay_label_affected,
+        built_config$overlay_label_unaffected
+      )
+    }
+    if ("overlay_codes" %in% names(built_config) == FALSE) {
+      built_config$overlay_codes <- c(
+        built_config$overlay_code_affected,
+        built_config$overlay_code_unaffected
+      )
+    }
+    built_config$overlay_alpha_values <- stats::setNames(
+      c(
+        built_config$overlay_alpha_affected,
+        built_config$overlay_alpha_unaffected
+      ),
+      built_config$overlay_labs
+    )
   } else if (stringr::str_to_lower(function_name) %in%
     c("ggphenotypebydegree", "phenotypebydegree")) {
-
-
+    built_config$label_nudge_y_flip <- FALSE # default to TRUE for ggphenotypebydegree
   }
 
   return(built_config)

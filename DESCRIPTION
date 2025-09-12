@@ -1,7 +1,7 @@
 Package: ggpedigree
 Title: Visualizing Pedigrees with 'ggplot2' and 'plotly'
-Version: 0.8.0
-Date/Publication: 2025-07-04 19:30:05 UTC
+Version: 0.9.0
+Date/Publication: 2025-09-12 22:50:14 UTC
 Authors@R: c(
     person("S. Mason", "Garrison", email= "garrissm@wfu.edu", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-4804-6003"))
@@ -21,12 +21,12 @@ Suggests: ggrepel, paletteer, mockery, patchwork, viridis, knitr,
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Language: en-US
 LazyData: true
 Config/Needs/website: rmarkdown
 NeedsCompilation: no
-Packaged: 2025-07-04 19:11:35 UTC; smaso
+Packaged: 2025-09-12 21:59:49 UTC; smaso
 Author: S. Mason Garrison [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4804-6003>)
 Maintainer: S. Mason Garrison <garrissm@wfu.edu>

@@ -2,7 +2,8 @@
 % Please edit documentation in R/ggpedigreeHelpers.R
 \name{.restoreNames}
 \alias{.restoreNames}
-\title{Restore Names in Connections Data Frame}
+\alias{restoreNames}
+\title{Restore user-specified column names in a connections data frame}
 \usage{
 .restoreNames(
   connections,
@@ -13,9 +14,21 @@
   twinID = "twinID",
   famID = "famID"
 )
+
+restoreNames(
+  connections,
+  personID = "personID",
+  momID = "momID",
+  dadID = "dadID",
+  spouseID = "spouseID",
+  twinID = "twinID",
+  famID = "famID"
+)
 }
 \arguments{
-\item{connections}{A data frame containing the connections data.}
+\item{connections}{A data frame containing connection identifiers whose
+columns may currently be named with internal defaults such as
+`personID`, `momID`, `dadID`, `spouseID`, `twinID`, `famID`.}
 
 \item{personID}{Character string specifying the column name for individual IDs. Defaults to "personID".}
 
@@ -30,7 +43,7 @@
 \item{famID}{Character string specifying the column name for family IDs. Defaults to "famID".}
 }
 \description{
-This function restores the names of the columns in the connections data frame
-to the user-specified names.
+Rename standard internal columns in a pedigree connections data frame
+back to user-specified names.
 }
 \keyword{internal}

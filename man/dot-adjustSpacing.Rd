@@ -2,9 +2,12 @@
 % Please edit documentation in R/ggpedigreeHelpers.R
 \name{.adjustSpacing}
 \alias{.adjustSpacing}
-\title{Adjust Spacing in ggPedigree Data}
+\alias{adjustSpacing}
+\title{Adjust spacing in ggPedigree coordinate columns}
 \usage{
 .adjustSpacing(ds, config)
+
+adjustSpacing(ds, config)
 }
 \arguments{
 \item{ds}{A data frame containing the ggPedigree data.}
@@ -29,7 +32,7 @@
 A data frame with adjusted x and y positions.
 }
 \description{
-This function adjusts the vertical and horizontal spacing of the ggPedigree data
-based on the configuration settings for generation height and width.
+Uniformly expands or contracts the horizontal (`x_*`) and vertical (`y_*`)
+configuration settings for generation height and width.
 }
 \keyword{internal}

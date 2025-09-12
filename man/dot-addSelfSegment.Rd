@@ -2,12 +2,15 @@
 % Please edit documentation in R/ggpedigree.R
 \name{.addSelfSegment}
 \alias{.addSelfSegment}
+\alias{addSelfSegment}
 \title{Add Self Segments to ggplot Pedigree Plot}
 \usage{
-.addSelfSegment(p, config, plot_connections)
+.addSelfSegment(plotObject, config, plot_connections)
+
+addSelfSegment(plotObject, config, plot_connections)
 }
 \arguments{
-\item{p}{A ggplot object.}
+\item{plotObject}{A ggplot object.}
 
 \item{config}{A list of configuration options for customizing the plot.
       See getDefaultPlotConfig for details. The list can include:

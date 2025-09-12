@@ -4,7 +4,7 @@
 #' sibling, and spousal connections. Optionally processes duplicate appearances
 #' of individuals (marked as `extra`) to ensure relational accuracy.
 #'
-#' @inheritParams  ggpedigree
+#' @inheritParams  ggPedigree
 #' @param config List of configuration parameters. Currently unused but passed through to internal helpers.
 #' @return A `data.frame` containing connection points and midpoints for graphical rendering. Includes:
 #'   \itemize{
@@ -88,8 +88,8 @@ calculateConnections <- function(ped,
     ped <- ped |>
       unique() |>
       dplyr::mutate(
-        parent_hash = makeSymmetricKey(.data$momID, .data$dadID),
-        couple_hash = makeSymmetricKey(.data$personID, .data$spouseID)
+        parent_hash = .makeSymmetricKey(.data$momID, .data$dadID),
+        couple_hash = .makeSymmetricKey(.data$personID, .data$spouseID)
       ) |>
       dplyr::mutate(
         parent_hash = gsub("NA.NA", NA_character_, .data$parent_hash),
@@ -101,7 +101,7 @@ calculateConnections <- function(ped,
   if (sum(ped$extra) > 0) {
     full_extra <- processExtras(ped, config = config)
 
-    ped <- full_extra$ped |> unique()
+    ped <- unique(full_extra$ped)
   } else {
     ped <- ped |>
       dplyr::mutate(
@@ -141,8 +141,6 @@ calculateConnections <- function(ped,
         link_as_twin = !is.na(.data$twinID) & .data$link_as_sibling
       )
   }
-
-
 
   # Get mom's coordinates
   mom_connections <- getRelativeCoordinates(
@@ -204,7 +202,7 @@ calculateConnections <- function(ped,
     parent_midpoints <- connections |>
       dplyr::filter(.data$link_as_sibling &
         !is.na(.data$dadID) & !is.na(.data$momID)) |>
-      unique() |>
+      #  unique() |>
       dplyr::group_by(.data$parent_hash) |>
       dplyr::summarize(
         x_midparent = mean(c(
@@ -224,7 +222,7 @@ calculateConnections <- function(ped,
       .data$link_as_spouse,
       !is.na(.data$spouseID)
     ) |>
-    unique() |>
+    #  unique() |>
     dplyr::group_by(.data$spouseID, .data$couple_hash) |>
     dplyr::summarize(
       x_mid_spouse = mean(c(
@@ -236,8 +234,7 @@ calculateConnections <- function(ped,
         dplyr::first(.data$y_spouse, na_rm = TRUE)
       )),
       .groups = "drop"
-    ) |>
-    unique()
+    ) # |> unique()
 
   # Calculate sibling group midpoints
   sibling_midpoints <- connections |>
@@ -248,7 +245,7 @@ calculateConnections <- function(ped,
         !is.na(.data$x_dad) & !is.na(.data$y_dad) & # dad’s coordinates linked
         !is.na(.data$x_fam)
     ) |>
-    unique() |>
+    #   unique() |>
     dplyr::group_by(
       .data$parent_hash,
       .data$x_mom, .data$y_mom,
@@ -258,8 +255,7 @@ calculateConnections <- function(ped,
       x_mid_sib = mean(.data$x_pos),
       y_mid_sib = dplyr::first(.data$y_pos, na_rm = TRUE),
       .groups = "drop"
-    ) |>
-    unique()
+    ) #|> unique()
 
 
   if (config$return_midparent == TRUE) {
@@ -282,7 +278,7 @@ calculateConnections <- function(ped,
         "x_dad", "y_dad"
       )
     ) |>
-    unique() |>
+    unique() |> # should reduce filesize
     dplyr::mutate(
       x_mid_sib = dplyr::case_when(
         is.na(.data$x_dad) & is.na(.data$x_mom) ~ NA_real_,
@@ -301,7 +297,6 @@ calculateConnections <- function(ped,
       x_mid_sib = dplyr::if_else(.data$link_as_sibling, .data$x_mid_sib, NA_real_),
       y_mid_sib = dplyr::if_else(.data$link_as_sibling, .data$y_mid_sib, NA_real_)
     )
-
 
   if (exists("full_extra") && !is.null(full_extra$self_coords)) {
     plot_connections <- list(
@@ -394,11 +389,11 @@ buildSpouseSegments <- function(ped, connections_for_FOO, use_hash = TRUE) {
         suffix = c("", "_spouse"),
         multiple = "any"
       ) |>
+      unique() |>
       dplyr::rename(
         x_spouse = "x_pos_spouse",
         y_spouse = "y_pos_spouse"
       ) |>
-      unique() |>
       dplyr::mutate(
         x_start = .data$x_spouse,
         x_end = .data$x_pos,
