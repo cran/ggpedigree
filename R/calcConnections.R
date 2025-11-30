@@ -125,7 +125,7 @@ calculateConnections <- function(ped,
   connections <- dplyr::select(ped, dplyr::all_of(select_vars)) |> unique()
 
 
-  # no duplications, so just use the same connections
+  # no duplication, so just use the same connections
   connections_skinny <- connections
 
   connections <- connections |>
@@ -326,7 +326,7 @@ calculateConnections <- function(ped,
 #' Build spouse segments
 #'
 #' @inheritParams calculateConnections
-#' @param connections_for_FOO A data frame containing the connections for the spouse segments
+#' @param connections_for_FOO A data frame containing the connections for the spouse segments from parent connections
 #' @param use_hash Logical. If TRUE, use the parent_hash to build segments. If FALSE, use the spouseID.
 #' @return A data frame with the spouse segments
 #' @keywords internal
@@ -433,11 +433,11 @@ buildTwinSegments <- function(ped, connections_for_FOO) {
       suffix = c("", "_twin"),
       multiple = "all"
     ) |>
+    unique() |>
     dplyr::rename(
       x_twin = "x_pos_twin",
       y_twin = "y_pos_twin"
     ) |>
-    unique() |>
     dplyr::mutate(
       x_mid_twin = (.data$x_pos + .data$x_twin) / 2,
       y_mid_twin = (.data$y_pos + .data$y_twin) / 2

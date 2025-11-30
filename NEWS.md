@@ -1,4 +1,25 @@
+# ggpedigree (development version)
+
+# ggpedigree 1.0.0.1
+## cran resubmission
+* Fixed a minor documentation issue with a url whose certificate had expired.
+
+# ggpedigree 1.0.0
+## cran submission
+* Folded in kinship2 functions to eliminate the dependency
+* Made kinship2 package optional, and only needed for plotPedigree (a kinship2 wrapper)
+* Importing relevant tests from kinship2 package
+* Updated documentation to reflect changes
+* Refactored code to improve maintainability
+* Added more unit tests for the new functions
+* Add  max_message_n to pedigree function to allow users to get more messages about pedigree complexity
+
+# ggpedigree 0.9.1
+* Minor documentation revisions to complement JOSS paper update
+* Added test coverage for buildSpouseSegments
+
 # ggpedigree 0.9.0
+## cran release
 * smarter segment coloring
 * added setting to hide legend for sex
 * avoided sapply() in ggPedigreeInteractive
@@ -22,7 +43,6 @@
 * Improve plotly conversion
 
 # ggpedigree 0.8.0
-## cran release
 ## joss paper submitted
 * Makes ggrepel a suggested package instead of a required one.
 * Make connections included in the plot by default.
