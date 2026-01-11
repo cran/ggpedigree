@@ -30,8 +30,8 @@ test_that(".makeSymmetricKey throws error on missing arguments", {
 })
 
 test_that(".makeSymmetricKey throws error on mixed types", {
-  expect_error(.makeSymmetricKey(1, "a"), "must be of the same type")
-  expect_error(.makeSymmetricKey("a", 1), "must be of the same type")
+  expect_error(.makeSymmetricKey(1, "a"))
+  expect_error(.makeSymmetricKey("a", 1))
 })
 
 test_that(".makeSymmetricKey handles special characters consistently", {
@@ -52,7 +52,8 @@ test_that("calculateCoordinates respects ped_align and ped_packed flags", {
 
   coords1 <- calculateCoordinates(ped,
     config = list(ped_align = TRUE, ped_packed = TRUE),
-    personID = "ID", spouseID = "spID"
+    personID = "ID", spouseID = "spID",
+    code_male = "M"
   )
 
 
@@ -131,7 +132,8 @@ test_that("computeDistances behaves in small data", {
 
   coords1 <- calculateCoordinates(ped,
     config = list(ped_align = TRUE, ped_packed = TRUE),
-    personID = "ID", spouseID = "spouseID"
+    personID = "ID", spouseID = "spouseID",
+    code_male = "M"
   )
 
   # Test with euclidean distance

@@ -14,7 +14,9 @@ library(viridis) # viridis for color palettes
 library(tidyverse) # for data wrangling
 
 ## ----load-data, include=FALSE-------------------------------------------------
-# if you don't have the most recent version of BGmisc, you may need to install it first as a stop-gap I've added the data loading here
+# if you don't have the most recent version of BGmisc, 
+# you may need to install it first. 
+# As a stop-gap I've added the data loading here
 data("potter") # load example data from BGmisc
 # if (!"twinID" %in% names(potter)) {
 # Add twinID and zygosity columns for demonstration purposes
@@ -47,8 +49,8 @@ ggPedigree(
   config = list(
     code_male = 1, # Here, 1 = male, 0 = female
     sex_color_include = FALSE,
-    segment_linewidth = .5,
-    point_size = 3,
+    segment_linewidth = .75,
+    point_size = 5,
     outline_multiplier = 1.5,
     # outline_additional_size = -1,
     sex_shape_female = "💸",
@@ -69,7 +71,7 @@ ggPedigree(potter,
   famID = "famID",
   personID = "personID"
 ) +
-  theme_bw(base_size = 12)
+  theme_bw(base_size = 12) + scale_colour_brewer(palette = "Set2")
 
 ## -----------------------------------------------------------------------------
 ggPedigree(
@@ -171,7 +173,8 @@ ggPedigree(potter,
     focal_fill_n_breaks = NULL,
     focal_fill_legend_title = "Genetic Relatives \nof Harry Potter",
     # "additive",
-    sex_color_include = FALSE
+    sex_color_include = FALSE,
+    sex_legend_show = FALSE
   ) # highlight Harry Potter
   # config  = list(segment_mz_color = NA) # color for monozygotic twins
 )
@@ -192,7 +195,8 @@ m1 <- ggPedigree(potter,
     focal_fill_n_breaks = 19,
     focal_fill_legend_show = FALSE,
     focal_fill_legend_title = "Mitochondrial Relatives \nof Harry Potter",
-    sex_color_include = FALSE
+    sex_color_include = FALSE,
+    label_text_size = 3
   ) # highlight Harry Potter
   # config  = list(segment_mz_color = NA) # color for monozygotic twins
 ) + ggplot2::guides(shape = "none")
@@ -211,7 +215,8 @@ m2 <- ggPedigree(potter,
     focal_fill_n_breaks = 19,
     focal_fill_legend_show = FALSE,
     focal_fill_legend_title = "Mitochondrial Relatives \nof Ginny Weasley",
-    sex_color_include = FALSE
+    sex_color_include = FALSE,
+    label_text_size = 3
   ) # highlight Harry Potter
   # config  = list(segment_mz_color = NA) # color for monozygotic twins
 ) + ggplot2::guides(shape = "none")
@@ -260,7 +265,8 @@ p +
     axis.ticks.y     = element_blank(),
     axis.title.x     = element_blank(),
     axis.title.y     = element_blank()
-  ) + scale_color_viridis(
+    ) + 
+  scale_color_viridis(
     option = "mako",
     discrete = TRUE,
     labels = c("Female", "Male", "Unknown")

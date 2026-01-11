@@ -185,6 +185,7 @@ test_that("ggPedigree handles self-segment", {
     #  debug = TRUE,
     config = list(
       code_male = 0,
+      code_female = 1,
       override_many2many = TRUE,
       sex_color_include = FALSE,
       status_code_affected = TRUE,
@@ -206,6 +207,7 @@ test_that("ggPedigree handles self-segment", {
     #  debug = TRUE,
     config = list(
       code_male = 0,
+      code_female = 1,
       debug = TRUE,
       override_many2many = TRUE,
       sex_color_include = FALSE,
@@ -252,10 +254,18 @@ test_that("focal fill works with ID", {
       focal_fill_personID = 1
     )
   )
-  expect_s3_class(p2, "gg") # Should return a ggplot object
-  expect_true("focal_fill" %in% names(p2$data)) # focal_fill column should be present
-  expect_true(any(is.na(p2$data$focal_fill))) # focal_fill values should be ge 0 and 1
-  expect_true(all(p2$data$focal_fill[!is.na(p2$data$focal_fill)] > 0 & p2$data$focal_fill[!is.na(p2$data$focal_fill)] <= 1)) # focal_fill values should be greater than 0 and less than or equal to 1
+
+  # Should return a ggplot object
+  expect_s3_class(p2, "gg")
+
+  # focal_fill column should be present
+  expect_true("focal_fill" %in% names(p2$data))
+
+  # focal_fill values should be ge 0 and 1
+  expect_true(any(is.na(p2$data$focal_fill)))
+
+  # focal_fill values should be greater than 0 and less than or equal to 1
+  expect_true(all(p2$data$focal_fill[!is.na(p2$data$focal_fill)] > 0 & p2$data$focal_fill[!is.na(p2$data$focal_fill)] <= 1))
 
   # test focal_fill with a different personID
 
@@ -271,13 +281,16 @@ test_that("focal fill works with ID", {
   expect_s3_class(p3, "gg") # Should return a ggplot object
   expect_true("focal_fill" %in% names(p3$data)) # focal_fill column should be present
   expect_true(all(p3$data$focal_fill >= 0 & p3$data$focal_fill <= 1)) # focal_fill values should be between 0 and 1
-  expect_true(all(p3$data$focal_fill[p3$data$personID == 8] == 1)) # focal_fill for personID 8 should be 1
+
+  # focal_fill for personID 8 should be 1
+  expect_true(all(p3$data$focal_fill[p3$data$personID == 8] == 1))
 })
 
 test_that("focal fill works with ID and different methods", {
   library(BGmisc)
   data("potter") # load example data from BGmisc
 
+  # Test with greyscale theme
   p <- ggPedigree(potter,
     famID = "famID",
     personID = "personID",
@@ -285,12 +298,30 @@ test_that("focal fill works with ID and different methods", {
       focal_fill_include = TRUE,
       sex_color_include = FALSE,
       focal_fill_personID = 1,
-      focal_fill_method = "steps"
+      focal_fill_method = "steps",
+      color_theme = "greyscale"
     )
   )
   expect_s3_class(p, "gg") # Should return a ggplot object
   expect_true("focal_fill" %in% names(p$data)) # focal_fill column should be present
   expect_true(all(p$data$focal_fill >= 0 & p$data$focal_fill <= 1)) # focal_fill values should be between 0 and 1
+
+  # Test that greyscale color scale is applied
+  # The plot should have a colour scale for the focal fill
+  colour_scales <- p$scales$find("colour")
+  expect_true(length(colour_scales) > 0, "Plot should have a colour scale for focal fill")
+
+  # Build the plot to verify greyscale colors are used
+  built <- ggplot2::ggplot_build(p)
+  expect_s3_class(built, "ggplot_built")
+
+  # Verify that the scale uses greyscale by checking the scale aesthetics
+  if (length(colour_scales) > 0) {
+    scale <- p$scales$scales
+    expect_true("colour" %in% scale[[3]]$aesthetics)
+    # The scale should be a Binned scale (used for gradient/steps methods)
+    expect_true(inherits(scale[[3]], "ScaleBinned"))
+  }
 
   p2 <- ggPedigree(potter,
     famID = "famID",
@@ -362,6 +393,7 @@ test_that("debug", {
       focal_fill_include = TRUE,
       sex_color_include = FALSE,
       focal_fill_use_log = TRUE,
+      add_phantoms = TRUE,
       debug = TRUE
     )
   ))
@@ -375,6 +407,7 @@ test_that("debug", {
       focal_fill_include = TRUE,
       sex_color_include = FALSE,
       debug = TRUE,
+      add_phantoms = TRUE,
       focal_fill_use_log = FALSE
     )
   )
@@ -411,7 +444,11 @@ test_that("behaves with kinship 2 pedigree object", {
       personID = "id",
       momID = "mindex",
       sexVar = "sex",
-      config = list(code_male = 1),
+      config = list(
+        code_male = 1,
+        code_female = 0,
+        code_na = NA
+      ),
       dadID = "findex",
       overlay_column = "affected",
       status_column = "status"
@@ -426,6 +463,7 @@ test_that("behaves with kinship 2 pedigree object", {
       sexVar = "sex",
       config = list(
         code_male = 1,
+        code_female = 0,
         focal_fill_include = TRUE,
         focal_fill_method = "zhue"
       ),

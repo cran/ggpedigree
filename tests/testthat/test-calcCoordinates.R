@@ -59,7 +59,7 @@ test_that("calculateConnections returns expected structure", {
     "dadID", "momID", "spouseID",
     "x_mom", "y_mom", "x_dad", "y_dad",
     "x_spouse", "y_spouse",
-    #   "x_midparent", "y_midparent",
+    #   "x_mid_parent", "y_mid_parent",
     "x_mid_spouse", "y_mid_spouse",
     "x_mid_sib", "y_mid_sib"
   )
@@ -144,10 +144,13 @@ test_that("calculateCoordinates uses default code_male = 1", {
     momID = c(NA, "A", "A", "C", NA),
     dadID = c(NA, "X", "X", "B", NA),
     spouseID = c("X", "C", "B", NA, "A"),
-    sex = c("F", "M", "F", "F", "M")
+    sex = c(0, 1, 0, 0, 1)
   )
 
-  coords <- calculateCoordinates(ped, personID = "ID", config = list(debug = TRUE))
+  coords <- calculateCoordinates(ped,
+    personID = "ID",
+    config = list(debug = TRUE)
+  )
   expect_true(all(c("x_order", "y_order", "x_pos", "y_pos", "nid") %in% names(coords)))
   expect_true(all(coords$ID %in% ped$ID)) # ID retention
   expect_true(all(coords$momID %in% ped$momID)) # momID retention

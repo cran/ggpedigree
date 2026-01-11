@@ -35,6 +35,7 @@
 #'  famid id findex mindex sex  affected status relation
 #' @author Terry Therneau
 #' @name pedigree
+#' @export
 
 
 pedigree <- function(id, dadid, momid,
@@ -56,15 +57,13 @@ pedigree <- function(id, dadid, momid,
 
   id <- pedigree.idrepair(id = id)
 
+  # momid <- pedigree.idrepair(id = momid)
+  # dadid <- pedigree.idrepair(id = dadid)
+
   sex <- pedigree.sexrepair(sex = sex)
 
-  ## Doc:  Errors2
   if (missing(missid)) {
-    if (is.numeric(id)) {
-      missid <- 0
-    } else {
-      missid <- ""
-    }
+    missid <- pedigree.makemissingid(id = id)
   }
 
   nofather <- (is.na(dadid) | dadid == missid)
@@ -252,7 +251,7 @@ pedigree.process_relation <- function(relation,
     }
   }
 
-  if (has_famid) {
+  if (has_famid == TRUE) {
     data.frame(
       famid = rel_famid,
       indx1 = indx1,
@@ -351,11 +350,16 @@ pedigree.sexrepair <- function(sex) {
   }
   codes <- c("male", "female", "unknown", "terminated")
   if (is.character(sex)) {
-    sex <- charmatch(casefold(sex, upper = FALSE), codes,
-      nomatch = 3
-    )
+    # if all numeric strings, convert to numeric
+    if (length(unique(suppressWarnings(as.numeric(sex)))) > 1 &&
+      all(is.numeric(unique(suppressWarnings(as.numeric(sex)))), na.rm = TRUE)) {
+      sex <- as.numeric(sex)
+    } else {
+      sex <- charmatch(casefold(sex, upper = FALSE), codes,
+        nomatch = 3
+      )
+    }
   }
-
   # assume either 0/1/2/4 =  female/male/unknown/term, or 1/2/3/4
   #  if only 1/2 assume no unknowns
   if (min(sex) == 0) {
@@ -363,9 +367,9 @@ pedigree.sexrepair <- function(sex) {
   }
   sex <- ifelse(sex < 1 | sex > 4, 3, sex)
   if (all(sex > 2)) {
-    stop("Invalid values for 'sex'")
+    stop("All sex values are labeled as unknown. Please try using config options to specify male, female, and unknown labels (code_male, code_female, code_unknown)")
   } else if (mean(sex == 3) > 0.25) {
-    warning("More than 25% of the sex values are 'unknown'")
+    warning("More than 25% of the sex values are 'unknown'. Please try using config options to specify male, female, and unknown labels.")
   }
   sex <- factor(sex, 1:4, labels = codes)
 
@@ -462,8 +466,8 @@ pedigree.process_affected <- function(affected, n) {
 
   if (length(indx) == 1) {
     class(x) <- "pedigree"
-  } # only one family chosen
-  else {
+    # only one family chosen
+  } else {
     class(x) <- "pedigreeList"
   }
   x
@@ -570,4 +574,15 @@ print.pedigreeList <- function(x, ...) {
     "Pedigree list with", length(x$id), "total subjects in",
     length(unique(x$famid)), "families\n"
   )
+}
+
+
+pedigree.makemissingid <- function(id) {
+  ## Doc:  Errors2
+
+  if (is.numeric(id)) {
+    0
+  } else {
+    ""
+  }
 }

@@ -16,7 +16,7 @@ calculateConnections(
 )
 }
 \arguments{
-\item{ped}{A data frame containing the pedigree data. Needs personID, momID, and dadID columns}
+\item{ped}{A data frame containing the pedigree data. Needs personID, momID, dadID, and sex columns.}
 
 \item{config}{List of configuration parameters. Currently unused but passed through to internal helpers.}
 
@@ -38,7 +38,7 @@ A `data.frame` containing connection points and midpoints for graphical renderin
     \item `x_pos`, `y_pos`: positions of focal individual
     \item `x_dad`, `y_dad`, `x_mom`, `y_mom`: parental positions (if available)
     \item `x_spouse`, `y_spouse`: spousal positions (if available)
-    \item `x_midparent`, `y_midparent`: midpoint between parents
+    \item `x_mid_parent`, `y_mid_parent`: midpoint between parents
     \item `x_mid_sib`, `y_mid_sib`: sibling group midpoint
     \item `x_mid_spouse`, `y_mid_spouse`: midpoint between spouses
   }
@@ -47,4 +47,22 @@ A `data.frame` containing connection points and midpoints for graphical renderin
 Computes graphical connection paths for a pedigree layout, including parent-child,
 sibling, and spousal connections. Optionally processes duplicate appearances
 of individuals (marked as `extra`) to ensure relational accuracy.
+}
+\examples{
+ped <- data.frame(
+  personID = c("A", "B", "C", "D", "X"),
+  momID = c(NA, "A", "A", "C", NA),
+  dadID = c(NA, "X", "X", "B", NA),
+  spouseID = c("X", "C", "B", NA, "A"),
+  sex = c("F", "M", "F", "F", "M")
+)
+
+coords <- calculateCoordinates(ped, code_male = "M")
+conns <- calculateConnections(coords, config = list(code_male = "M"))
+names(conns)
+head(conns$connections)
+
+}
+\seealso{
+calculateCoordinates, ggPedigree, vignette("v00_plots")
 }

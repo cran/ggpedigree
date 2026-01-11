@@ -2,9 +2,6 @@
 % Please edit documentation in R/ggPedigreeInteractive.R
 \name{ggPedigreeInteractive}
 \alias{ggPedigreeInteractive}
-\alias{ggpedigreeinteractive}
-\alias{ggpedigreeInteractive}
-\alias{ggPedigreeinteractive}
 \title{Interactive pedigree plot (Plotly wrapper around ggPedigree)}
 \usage{
 ggPedigreeInteractive(
@@ -16,6 +13,7 @@ ggPedigreeInteractive(
   patID = "patID",
   matID = "matID",
   twinID = "twinID",
+  spouseID = "spouseID",
   status_column = NULL,
   tooltip_columns = NULL,
   focal_fill_column = NULL,
@@ -23,52 +21,13 @@ ggPedigreeInteractive(
   config = list(optimize_plotly = TRUE),
   debug = FALSE,
   return_widget = TRUE,
-  phantoms = FALSE,
-  ...
-)
-
-ggpedigreeInteractive(
-  ped,
-  famID = "famID",
-  personID = "personID",
-  momID = "momID",
-  dadID = "dadID",
-  patID = "patID",
-  matID = "matID",
-  twinID = "twinID",
-  status_column = NULL,
-  tooltip_columns = NULL,
-  focal_fill_column = NULL,
-  overlay_column = NULL,
-  config = list(optimize_plotly = TRUE),
-  debug = FALSE,
-  return_widget = TRUE,
-  phantoms = FALSE,
-  ...
-)
-
-ggpedigreeinteractive(
-  ped,
-  famID = "famID",
-  personID = "personID",
-  momID = "momID",
-  dadID = "dadID",
-  patID = "patID",
-  matID = "matID",
-  twinID = "twinID",
-  status_column = NULL,
-  tooltip_columns = NULL,
-  focal_fill_column = NULL,
-  overlay_column = NULL,
-  config = list(optimize_plotly = TRUE),
-  debug = FALSE,
-  return_widget = TRUE,
-  phantoms = FALSE,
-  ...
+  hints = NULL,
+  code_male = NULL,
+  sexVar = "sex"
 )
 }
 \arguments{
-\item{ped}{A data frame containing the pedigree data. Needs personID, momID, and dadID columns}
+\item{ped}{A data frame containing the pedigree data. Needs personID, momID, dadID, and sex columns.}
 
 \item{famID}{Character string specifying the column name for family IDs. Defaults to "famID".}
 
@@ -84,6 +43,8 @@ ggpedigreeinteractive(
 
 \item{twinID}{Character string specifying the column name for twin IDs. Defaults to "twinID".}
 
+\item{spouseID}{Character string specifying the column name for spouse IDs. Defaults to "spouseID".}
+
 \item{status_column}{Character string specifying the column name for affected status. Defaults to NULL.}
 
 \item{tooltip_columns}{Character vector of column names to show when hovering.
@@ -96,9 +57,9 @@ Defaults to NULL, which uses the default tooltip columns.}
 \item{overlay_column}{Character string specifying the column name for overlay alpha values.}
 
 \item{config}{A list of configuration options for customizing the plot.
-      See getDefaultPlotConfig for details. The list can include:
+      See getDefaultPlotConfig for details of each option. The list can include:
 \describe{
-   \item{code_male}{Integer or string. Value identifying males in the sex column. (typically 0 or 1) Default: 1.}
+   \item{code_male}{Integer or string. Value identifying males in the sex column. (typically 0 or 1) Default: 1}
    \item{segment_spouse_color, segment_self_color}{Character. Line colors for respective connection types.}
    \item{segment_sibling_color, segment_parent_color, segment_offspring_color}{Character. Line colors for respective connection types.}
    \item{label_text_size, point_size, segment_linewidth}{Numeric. Controls text size, point size, and line thickness.}
@@ -117,9 +78,11 @@ Defaults to NULL, which uses the default tooltip columns.}
 If FALSE, returns the underlying plotly object (useful for further
 customization before printing).}
 
-\item{phantoms}{Logical. If TRUE, adds phantom parents for individuals without parents.}
+\item{hints}{Data frame with hints for layout adjustments. Default: NULL.}
 
-\item{...}{Additional arguments passed to `ggplot2` functions.}
+\item{code_male}{Integer or string. Value identifying males in the sex column. (typically 0 or 1) Default: 1}
+
+\item{sexVar}{Character string specifying the column name for sex. Defaults to "sex".}
 }
 \value{
 A plotly htmlwidget (or plotly object if `return_widget = FALSE`)
@@ -134,4 +97,33 @@ zoom, and pan functionality.
 library(BGmisc)
 data("potter")
 ggPedigreeInteractive(potter, famID = "famID", personID = "personID")
+
+
+data(hazard)
+ggPedigreeInteractive(
+  hazard,
+  famID = "famID",
+  personID = "ID",
+  momID = "momID",
+  dadID = "dadID",
+  config = list(
+    code_male = 0,
+    status_column = "affected",
+    label_nudge_y = .25,
+    label_include = TRUE,
+    include_tooltip = TRUE,
+    label_method = "geom_text",
+    sex_color_include = TRUE
+  ),
+  tooltip_columns = c("personID", "birthYr", "onsetYr", "deathYr")
+) |>
+  plotly::layout(
+    title = "Hazard Pedigree (interactive)",
+    hoverlabel = list(bgcolor = "white"),
+    margin = list(l = 50, r = 50, t = 50, b = 50)
+  ) |>
+  plotly::config(displayModeBar = TRUE)
+}
+\seealso{
+ggPedigree.core, ggPedigree, vignette("v20_interactiveplots"), vignette("v21_extendedinteractiveplots"), vignette("v32_plots_morecomplexity")
 }

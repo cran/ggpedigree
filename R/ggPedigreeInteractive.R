@@ -7,12 +7,38 @@
 #'
 #' @inheritParams ggPedigree
 #' @return A plotly htmlwidget (or plotly object if `return_widget = FALSE`)
-#' @aliases ggpedigreeinteractive ggPedigreeInteractive ggpedigreeInteractive  ggPedigreeinteractive
 #' @examples
 #' library(BGmisc)
 #' data("potter")
 #' ggPedigreeInteractive(potter, famID = "famID", personID = "personID")
+#'
+#'
+#' data(hazard)
+#' ggPedigreeInteractive(
+#'   hazard,
+#'   famID = "famID",
+#'   personID = "ID",
+#'   momID = "momID",
+#'   dadID = "dadID",
+#'   config = list(
+#'     code_male = 0,
+#'     status_column = "affected",
+#'     label_nudge_y = .25,
+#'     label_include = TRUE,
+#'     include_tooltip = TRUE,
+#'     label_method = "geom_text",
+#'     sex_color_include = TRUE
+#'   ),
+#'   tooltip_columns = c("personID", "birthYr", "onsetYr", "deathYr")
+#' ) |>
+#'   plotly::layout(
+#'     title = "Hazard Pedigree (interactive)",
+#'     hoverlabel = list(bgcolor = "white"),
+#'     margin = list(l = 50, r = 50, t = 50, b = 50)
+#'   ) |>
+#'   plotly::config(displayModeBar = TRUE)
 #' @export
+#' @seealso ggPedigree.core, ggPedigree, vignette("v20_interactiveplots"), vignette("v21_extendedinteractiveplots"), vignette("v32_plots_morecomplexity")
 
 
 ggPedigreeInteractive <- function(ped,
@@ -23,6 +49,7 @@ ggPedigreeInteractive <- function(ped,
                                   patID = "patID",
                                   matID = "matID",
                                   twinID = "twinID",
+                                  spouseID = "spouseID",
                                   status_column = NULL,
                                   tooltip_columns = NULL,
                                   focal_fill_column = NULL,
@@ -30,8 +57,9 @@ ggPedigreeInteractive <- function(ped,
                                   config = list(optimize_plotly = TRUE),
                                   debug = FALSE,
                                   return_widget = TRUE,
-                                  phantoms = FALSE,
-                                  ...) {
+                                  hints = NULL,
+                                  code_male = NULL,
+                                  sexVar = "sex") {
   if (!requireNamespace("plotly", quietly = TRUE)) {
     stop("The 'plotly' package is required for interactive plots.")
   }
@@ -55,17 +83,21 @@ ggPedigreeInteractive <- function(ped,
 
   if (!is.null(tooltip_columns)) {
     config$tooltip_columns <- tooltip_columns
+    tooltip_columns <- NULL
   }
   if (!is.null(return_widget)) {
     config$return_widget <- return_widget
+    return_widget <- NULL
   }
   if (!is.null(debug)) {
     config$debug <- debug
+    debug <- NULL
   }
   # Set default styling and layout parameters
   default_config <- getDefaultPlotConfig(
-    function_name = "ggpedigreeinteractive",
-    personID = personID
+    function_name = "ggPedigreeInteractive",
+    personID = personID,
+    color_theme = ifelse(is.null(config$color_theme), "color", config$color_theme)
   )
 
   # Merge with user-specified overrides
@@ -73,8 +105,14 @@ ggPedigreeInteractive <- function(ped,
   config <- buildPlotConfig(
     default_config = default_config,
     config = config,
-    function_name = "ggpedigreeinteractive"
+    function_name = "ggPedigreeInteractive",
+    pedigree_size = nrow(ped)
   )
+  if (exists("code_male") && is.null(code_male) == FALSE) {
+    config$code_male <- code_male
+    code_male <- NULL
+  }
+
   ## 1. Build the static ggplot using the existing engine
   static_plot <- ggPedigree.core(ped,
     famID = famID,
@@ -84,14 +122,14 @@ ggPedigreeInteractive <- function(ped,
     patID = patID,
     matID = matID,
     twinID = twinID,
+    spouseID = spouseID,
     status_column = config$status_column,
     overlay_column = overlay_column,
     config = config,
     debug = config$debug,
     focal_fill_column = focal_fill_column,
-    phantoms = phantoms,
-    function_name = "ggpedigreeinteractive",
-    ...
+    function_name = "ggPedigreeInteractive",
+    sexVar = sexVar
   )
 
   ## 2. Identify data columns for tooltips ----------------------------------
@@ -217,7 +255,7 @@ formatTooltip <- function(df, tooltip_columns, sep = ": ") {
 #'  "static". Default is "plotly".
 #'  @return The optimized plot object with rounded coordinates.
 #'  @keywords internal
-#'  @aliases optimisePedigree
+
 
 optimizePedigree <- function(p, config = list(), plot_type = c("plotly", "static")) {
   plot_type <- match.arg(plot_type)
@@ -252,7 +290,6 @@ optimizePlotlyPedigree <- function(p, config = list()) {
     }
   }
 
-
   p
 }
 #' @title Optimize Static Pedigree Plot
@@ -267,7 +304,6 @@ optimizePlotlyPedigree <- function(p, config = list()) {
 #' "y_order", "y_fam", "zygosity", "extra", and "x_fam".
 #' @return The optimized ggplot object with rounded coordinates and reduced data frame.
 #' @keywords internal
-#' @aliases optimiseStaticPedigree
 
 
 optimizeStaticPedigree <- function(p, config = list(), variable_drop = c(
@@ -311,12 +347,3 @@ optimizeStaticPedigree <- function(p, config = list(), variable_drop = c(
 
   p
 }
-
-
-#' @rdname ggPedigreeInteractive
-#' @export
-ggpedigreeInteractive <- ggPedigreeInteractive
-
-#' @rdname ggPedigreeInteractive
-#' @export
-ggpedigreeinteractive <- ggPedigreeInteractive
